@@ -1,0 +1,59 @@
+/*
+ * DirtyJTAG Bluepill board definition.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <st/f1/stm32f103X8.dtsi>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "DirtyJTAG Bluepill";
+	compatible = "dirtyjtag,bluepill", "st,stm32f103c8";
+
+	chosen {
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+	};
+
+	zephyr,user {
+		tck-gpios = <&gpioa 5 GPIO_ACTIVE_HIGH>;
+		tdo-gpios = <&gpioa 6 GPIO_ACTIVE_HIGH>;
+		tdi-gpios = <&gpioa 7 GPIO_ACTIVE_HIGH>;
+		tms-gpios = <&gpioa 3 GPIO_ACTIVE_HIGH>;
+		trst-gpios = <&gpioa 4 GPIO_ACTIVE_HIGH>;
+		srst-gpios = <&gpioa 2 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&clk_hse {
+	clock-frequency = <DT_FREQ_M(8)>;
+	status = "okay";
+};
+
+&pll {
+	mul = <9>;
+	clocks = <&clk_hse>;
+	status = "okay";
+};
+
+&rcc {
+	clocks = <&pll>;
+	clock-frequency = <DT_FREQ_M(72)>;
+	ahb-prescaler = <1>;
+	apb1-prescaler = <2>;
+	apb2-prescaler = <1>;
+};
+
+&gpioa {
+	status = "okay";
+};
+
+&gpiob {
+	status = "okay";
+};
+
+zephyr_udc0: &usb {
+	status = "okay";
+};

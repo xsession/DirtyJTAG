@@ -19,6 +19,8 @@
   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#pragma once
+
 /**
  * @brief Handle a DirtyJTAG command
  *
@@ -26,4 +28,8 @@
  * @param transfer Received packet
  * @return Command needs to send data back to host
  */
-uint8_t cmd_handle(usbd_device *usbd_dev, const usbd_transfer *transfer);
+#include <stdint.h>
+
+#include "usb.h"
+
+uint8_t cmd_handle(const struct dirtyjtag_usb_transfer *transfer);

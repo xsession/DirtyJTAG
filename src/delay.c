@@ -19,28 +19,12 @@
   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <unicore-mx/cm3/systick.h>
-#include <unicore-mx/stm32/gpio.h>
 #include <stdint.h>
-
-static volatile bool wait_for_irq;
+#include <zephyr/kernel.h>
 
 void delay_init(void) {
-  systick_set_clocksource(STK_CSR_CLKSOURCE_AHB);
 }
 
-void _internal_delay_us(const uint32_t delay_val) {
-  wait_for_irq = true;
-
-  systick_set_reload(delay_val);
-  systick_clear();
-  systick_interrupt_enable();
-  systick_counter_enable();
-
-  while (wait_for_irq);
-}
-
-void sys_tick_handler(void) {
-  wait_for_irq = false;
-  systick_interrupt_disable();
+void delay_us(uint32_t delay_val) {
+  k_busy_wait(delay_val);
 }

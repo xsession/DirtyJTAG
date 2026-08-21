@@ -1,20 +1,16 @@
-FROM alpine:3.14 as build-stage
-MAINTAINER Benjamin Henrion <zoobab@gmail.com>
-LABEL Description="DirtyJTAG firmware for STM32 Bluepill board" 
+FROM zephyrprojectrtos/zephyr-build:v0.26.13 AS build-stage
+LABEL Description="DirtyJTAG Zephyr firmware"
 
-RUN apk add --no-cache make python3 gcc-arm-none-eabi newlib-arm-none-eabi
-RUN ln -sf python3 /usr/bin/python
+USER root
+WORKDIR /work
+COPY . /work/dirtyjtag
 
-ADD . /dirtyjtag
-WORKDIR /dirtyjtag
+RUN west init -l /work/dirtyjtag
+RUN west update --narrow -o=--depth=1
 
-RUN make PLATFORM=bluepill
-RUN make PLATFORM=stlinkv2
-RUN make PLATFORM=stlinkv2dfu
-RUN make PLATFORM=baite
-RUN make PLATFORM=olimexstm32h103
-RUN make PLATFORM=stlinkv2white
+WORKDIR /work/dirtyjtag
+RUN west build -b dirtyjtag_bluepill/stm32f103xb -d build .
 
 FROM scratch AS export-stage
-COPY --from=build-stage /dirtyjtag/src/dirtyjtag.*.bin /
-COPY --from=build-stage /dirtyjtag/src/dirtyjtag.*.elf /
+COPY --from=build-stage /work/dirtyjtag/build/zephyr/zephyr.bin /dirtyjtag.bin
+COPY --from=build-stage /work/dirtyjtag/build/zephyr/zephyr.elf /dirtyjtag.elf

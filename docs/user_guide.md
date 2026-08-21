@@ -1,0 +1,1 @@
+west build -p always -b rpi_pico/rp2040 -d build-rp2040 . -- -DDTC_OVERLAY_FILE=boards/rpi_pico_rp2040.overlay

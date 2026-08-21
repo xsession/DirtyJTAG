@@ -19,10 +19,18 @@
   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <unicore-mx/usbd/usbd.h>
+#pragma once
+
+#include <stdint.h>
 
 #define DIRTYJTAG_READ_ENDPOINT 0x01
 #define DIRTYJTAG_WRITE_ENDPOINT 0x82
+#define DIRTYJTAG_USB_BUFFER_SIZE 64
+
+struct dirtyjtag_usb_transfer {
+  const uint8_t *buffer;
+  uint32_t transferred;
+};
 
 /**
  * @bried Update USB descriptor serial with the MCU's internal ID
@@ -30,20 +38,19 @@
 void usb_read_serial(void);
 
 /**
- * @brief Initialises USB peripheral on the STM32F103
+ * @brief Initialises USB peripheral
  */
-void usb_init(void);
+int usb_init(void);
 
 /**
- * @brief Forces USB reenumeration by pulling data lines
+ * @brief Gives boards a chance to force USB reenumeration
  */
 void usb_reenumerate(void);
 
 /**
  * @brief Send a bulk USB packet
  *
- * @param usbd_dev USB device
  * @param sent_buffer Data buffer
  * @param size Size in bytes
  */
-void usb_send(usbd_device *usbd_dev, uint8_t *sent_buffer, uint8_t size);
+void usb_send(uint8_t *sent_buffer, uint8_t size);

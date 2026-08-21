@@ -1,0 +1,6 @@
+board:
+  name: dirtyjtag_bluepill
+  full_name: DirtyJTAG Bluepill
+  vendor: dirtyjtag
+  socs:
+    - name: stm32f103xb

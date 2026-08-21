@@ -1,0 +1,10 @@
+/ {
+  zephyr,user {
+    tck-gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+    tdo-gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
+    tdi-gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>;
+    tms-gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+    trst-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+    srst-gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>;
+  };
+};

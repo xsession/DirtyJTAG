@@ -5,46 +5,47 @@
 In order to compile DirtyJTAG, you will need the following software:
 
  * git
- * ARM toolchain (I'm using Fedora's `arm-none-eabi-gcc-cs`/`arm-none-eabi-newline` packages)
+ * Zephyr SDK
+ * west
  * make
 
 Clone this repository :
 
 ```
-git clone --recursive https://github.com/dirtyjtag/dirtyjtag
+git clone https://github.com/dirtyjtag/dirtyjtag
 cd dirtyjtag
 ```
 
-Then you can build all the firmware versions :
+Initialize the Zephyr workspace and build the default STM32F103 "blue pill"
+configuration:
 
 ```
+west init -l .
+west update
 make
 ```
 
-Once the build is completed, your freshly compiled firmware will be available in `src/` as a binary file.
+The default `make` target builds `dirtyjtag_bluepill/stm32f103xb`, an in-tree
+Zephyr board definition for the common STM32F103C8 Bluepill-style pinout.
 
-If you only want to build a specific configuration of DirtyJTAG, directly call the right Makefile with the correct parameters for the platform and the bootloader type. Before that, make sure you have a build of unicore-mx.
+Once the build is completed, your freshly compiled firmware will be available in
+`build/zephyr/` as `zephyr.bin` and `zephyr.elf`.
+
+DirtyJTAG now uses Zephyr devicetree overlays for hardware independence. Build a
+different Zephyr-supported board by changing `BOARD`:
 
 ```
-make -C unicore-mx all
-make -f Makefile.stm32f1 PLATFORM=bluepill LOADER=noloader
+make BOARD=olimex_stm32_h103/stm32f103xb
 ```
 
-`PLATFORM` could be any of the following:
+Board-specific JTAG pins live in Zephyr board DTS files or overlays under
+`boards/`. To port DirtyJTAG to a new Zephyr board, define `tck-gpios`,
+`tdi-gpios`, `tdo-gpios`, `tms-gpios`, and optional `trst-gpios` and
+`srst-gpios` in the `zephyr,user` node.
 
- * `bluepill`
- * `stlinkv2`
- * `stlinkv2white`
- * `baite`
- * `olimexstm32h103`
-
-`LOADER` could be any of the following:
-
- * `noloader`: No bootloader
- * `loader2k`: Bootloader is occupying 0x0-0x2000, DirtyJTAG starts at 0x2000 offset
- * `loader4k`: Bootloader is occupying 0x0-0x4000, DirtyJTAG starts at 0x4000 offset
-
-You should use the `noloader` variant if your microcontroller hasn't been programmed with a bootloader. If you are using a bootloader (eg. [dapboot](https://github.com/devanlai/dapboot)), you may use the `loader2k` or `loader4k` options depending on the base address that will be executed by the bootloader (`loader2k` => 0x08002000, `loader4k` => 0x08004000).
+`unicore-mx/` is vendored into this repository as legacy source at the commit
+that was previously referenced by the submodule. It is no longer used by the
+default firmware build.
 
 ## Docker build
 

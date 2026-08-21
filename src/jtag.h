@@ -19,6 +19,11 @@
   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#pragma once
+
+#include <stdbool.h>
+#include <stdint.h>
+
 /**
  * @brief Initialize JTAG
  *
@@ -102,16 +107,3 @@ void jtag_transfer(uint16_t length, const uint8_t *in,
  * @return Last TDO state
  */
 bool jtag_strobe(uint8_t pulses, bool tms, bool tdi);
-
-#define F_CPU 72000000UL
-#define HW_stlinkv2 0
-#define HW_bluepill 1
-#define HW_olimexstm32h103 1
-#define HW_baite 2
-#define HW_stlinkv2white 3
-
-#if (PLATFORM == HW_bluepill)  || (PLATFORM == HW_stlinkv2white)
-#define USE_SPI1 1
-#else
-#define USE_SPI1 0
-#endif

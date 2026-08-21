@@ -22,8 +22,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <unicore-mx/usbd/usbd.h>
-#include <unicore-mx/stm32/gpio.h>
 
 #include "jtag.h"
 #include "usb.h"
@@ -119,10 +117,10 @@ static uint32_t cmd_clk(const uint8_t *commands, bool readout, uint8_t *output_b
 
 static uint8_t tx_buffer[64];
 
-uint8_t cmd_handle(usbd_device *usbd_dev, const usbd_transfer *transfer) {
-  uint8_t *rxbuf = (uint8_t *)transfer->buffer;
+uint8_t cmd_handle(const struct dirtyjtag_usb_transfer *transfer) {
+  const uint8_t *rxbuf = transfer->buffer;
   uint32_t count = transfer->transferred;
-  uint8_t *commands = rxbuf;
+  const uint8_t *commands = rxbuf;
   uint8_t *output_buffer = tx_buffer;
 
   while ((commands < (rxbuf + count)) && (*commands != CMD_STOP))
@@ -169,7 +167,7 @@ uint8_t cmd_handle(usbd_device *usbd_dev, const usbd_transfer *transfer) {
   }
   /* Send the transfer response back to host */
   if (tx_buffer != output_buffer)
-    usb_send(usbd_dev, tx_buffer, output_buffer - tx_buffer);
+    usb_send(tx_buffer, output_buffer - tx_buffer);
   return 1;
 }
 

@@ -19,308 +19,134 @@
   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <stdlib.h>
-#include <unicore-mx/usbd/usbd.h>
-#include <unicore-mx/stm32/gpio.h>
-#include <unicore-mx/stm32/rcc.h>
+#include <stdint.h>
+#include <string.h>
 
+#include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/usb/usb_ch9.h>
+#include <zephyr/usb/usb_device.h>
 
-#include "delay.h"
 #include "cmd.h"
+#include "delay.h"
 #include "usb.h"
 
-#define DIRTYJTAG_USB_BUFFER_SIZE 64
+struct dirtyjtag_usb_desc {
+  struct usb_if_descriptor iface;
+  struct usb_ep_descriptor ep_out;
+  struct usb_ep_descriptor ep_in;
+} __packed;
 
-/**
- * @brief Registers the callback for incomming USB packet
- *
- * This function registers the callback which be called when
- * an incomming USB packet arrives. It must be called each time
- * you want to receive a USB packet.
- *
- * @param usbd_dev USB device
- */
-static void usb_prepare_rx(usbd_device *usbd_dev);
+static uint8_t rx_usb_buffer[DIRTYJTAG_USB_BUFFER_SIZE];
+static uint8_t tx_usb_buffer[DIRTYJTAG_USB_BUFFER_SIZE];
 
-/**
- * @brief USB RX callback
- *
- * This function will be called whenever a USB packet arrives.
- * It will process the received packet. It will automatically
- * call usb_prepare_rx() in order to receive new packets.
- *
- * @param usbd_dev USB device
- * @param transfer Packet
- * @param status Transfer status
- * @param usb_id URB id
- */
-static void usb_rx_callback(usbd_device *usbd_dev, const usbd_transfer *transfer,
-			    usbd_transfer_status status, usbd_urb_id urb_id);
+static void dirtyjtag_out_cb(uint8_t ep, enum usb_dc_ep_cb_status_code status) {
+  uint32_t read = 0U;
 
-/**
- * @brief USB TX callback
- *
- * This function will be called after a packet a correctly been
- * sent. It will automatically call usb_prepare_rx() in order to
- * receive new packets.
- *
- * @param usbd_dev USB device
- * @param transfer Packet
- * @param status Transfer status
- * @param urb_id URB id
- */
-static void usb_tx_callback(usbd_device *usbd_dev, const usbd_transfer *transfer,
-			    usbd_transfer_status status, usbd_urb_id urb_id);
+  ARG_UNUSED(status);
 
-typedef uint8_t usb_buffer[DIRTYJTAG_USB_BUFFER_SIZE];
-usb_buffer tx_usb_buffer;
-usb_buffer rx_usb_buffer[2];
+  if (usb_read(ep, rx_usb_buffer, sizeof(rx_usb_buffer), &read) != 0) {
+    return;
+  }
 
-static const struct usb_string_descriptor string_lang_list = {
-	.bLength = USB_DT_STRING_SIZE(1),
-	.bDescriptorType = USB_DT_STRING,
-	.wData = {
-		USB_LANGID_ENGLISH_UNITED_STATES
-	}
-};
+  if (read > 0U) {
+    const struct dirtyjtag_usb_transfer transfer = {
+      .buffer = rx_usb_buffer,
+      .transferred = read,
+    };
 
-/* Generated using unicore-mx/scripts/usb-strings.py */
-static const struct usb_string_descriptor product_string = {
-	.bLength = USB_DT_STRING_SIZE(9),
-	.bDescriptorType = USB_DT_STRING,
-	/* "DirtyJTAG" */
-	.wData = {
-		0x0044, 0x0069, 0x0072, 0x0074, 0x0079, 0x004a, 0x0054, 0x0041,
-		0x0047
-	}
-};
+    cmd_handle(&transfer);
+  }
+}
 
-static const struct usb_string_descriptor man_string = {
-	.bLength = USB_DT_STRING_SIZE(11),
-	.bDescriptorType = USB_DT_STRING,
-	/* Jean THOMAS */
-	.wData = {
-		0x004a, 0x0065, 0x0061, 0x006e, 0x0020, 0x0054, 0x0048, 0x004f,
-		0x004d, 0x0041, 0x0053
-	}
-};
+static void dirtyjtag_in_cb(uint8_t ep, enum usb_dc_ep_cb_status_code status) {
+  ARG_UNUSED(ep);
+  ARG_UNUSED(status);
+}
 
-static struct usb_string_descriptor serial_string = {
-	.bLength = USB_DT_STRING_SIZE(24),
-	.bDescriptorType = USB_DT_STRING,
-	.wData = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 }
-};
+static void dirtyjtag_status_cb(struct usb_cfg_data *cfg,
+                                enum usb_dc_status_code status,
+                                const uint8_t *param) {
+  ARG_UNUSED(cfg);
+  ARG_UNUSED(status);
+  ARG_UNUSED(param);
+}
 
-static const struct usb_string_descriptor **string_data[1] = {
-  (const struct usb_string_descriptor *[]){&man_string, &product_string, &serial_string}
-};
-
-static const struct usbd_info_string string = {
-	.lang_list = &string_lang_list,
-	.count = 3,
-	.data = string_data
-};
-
-const struct __attribute__((packed)) {
-  struct usb_config_descriptor config;
-  struct usb_interface_descriptor iface;
-  struct usb_endpoint_descriptor endp[2];
-} config_desc = {
-  .config = {
-    .bLength = USB_DT_CONFIGURATION_SIZE,
-    .bDescriptorType = USB_DT_CONFIGURATION,
-    .wTotalLength = sizeof(config_desc),
-    .bNumInterfaces = 1,
-    .bConfigurationValue = 1,
-    .iConfiguration = 0,
-    .bmAttributes = 0x80,
-    .bMaxPower = 0x32, /* 100mA current consumption */
+static struct usb_ep_cfg_data dirtyjtag_ep_cfg[] = {
+  {
+    .ep_cb = dirtyjtag_out_cb,
+    .ep_addr = DIRTYJTAG_READ_ENDPOINT,
   },
+  {
+    .ep_cb = dirtyjtag_in_cb,
+    .ep_addr = DIRTYJTAG_WRITE_ENDPOINT,
+  },
+};
 
+USBD_CLASS_DESCR_DEFINE(primary, 0) struct dirtyjtag_usb_desc dirtyjtag_desc = {
   .iface = {
-    .bLength = USB_DT_INTERFACE_SIZE,
-    .bDescriptorType = USB_DT_INTERFACE,
+    .bLength = sizeof(struct usb_if_descriptor),
+    .bDescriptorType = USB_DESC_INTERFACE,
     .bInterfaceNumber = 0,
     .bAlternateSetting = 0,
     .bNumEndpoints = 2,
-    .bInterfaceClass = USB_CLASS_VENDOR, /* Custom USB class */
+    .bInterfaceClass = USB_BCC_VENDOR,
     .bInterfaceSubClass = 0,
     .bInterfaceProtocol = 0,
     .iInterface = 0,
   },
-
-  .endp = {
-    {
-      .bLength = USB_DT_ENDPOINT_SIZE,
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = DIRTYJTAG_READ_ENDPOINT,
-      .bmAttributes = USB_ENDPOINT_ATTR_BULK,
-      .wMaxPacketSize = 64,
-      .bInterval = 1
-    }, {
-      .bLength = USB_DT_ENDPOINT_SIZE,
-      .bDescriptorType = USB_DT_ENDPOINT,
-      .bEndpointAddress = DIRTYJTAG_WRITE_ENDPOINT,
-      .bmAttributes = USB_ENDPOINT_ATTR_BULK,
-      .wMaxPacketSize = 64,
-      .bInterval = 1
-    }
-  }
+  .ep_out = {
+    .bLength = sizeof(struct usb_ep_descriptor),
+    .bDescriptorType = USB_DESC_ENDPOINT,
+    .bEndpointAddress = DIRTYJTAG_READ_ENDPOINT,
+    .bmAttributes = USB_DC_EP_BULK,
+    .wMaxPacketSize = sys_cpu_to_le16(DIRTYJTAG_USB_BUFFER_SIZE),
+    .bInterval = 0,
+  },
+  .ep_in = {
+    .bLength = sizeof(struct usb_ep_descriptor),
+    .bDescriptorType = USB_DESC_ENDPOINT,
+    .bEndpointAddress = DIRTYJTAG_WRITE_ENDPOINT,
+    .bmAttributes = USB_DC_EP_BULK,
+    .wMaxPacketSize = sys_cpu_to_le16(DIRTYJTAG_USB_BUFFER_SIZE),
+    .bInterval = 0,
+  },
 };
 
-const struct usb_device_descriptor dev_desc = {
-	.bLength = USB_DT_DEVICE_SIZE,
-	.bDescriptorType = USB_DT_DEVICE,
-	.bcdUSB = 0x0110,
-	.bDeviceClass = USB_CLASS_VENDOR,
-	.bDeviceSubClass = 0,
-	.bDeviceProtocol = 0,
-	.bMaxPacketSize0 = 64,
-	.idVendor = 0x1209,
-	.idProduct = 0xC0CA,
-	.bcdDevice = 0x0200,
-	.iManufacturer = 1,
-	.iProduct = 2,
-	.iSerialNumber = 3,
-	.bNumConfigurations = 1
+USBD_DEFINE_CFG_DATA(dirtyjtag_config) = {
+  .usb_device_description = NULL,
+  .interface_descriptor = &dirtyjtag_desc.iface,
+  .cb_usb_status = dirtyjtag_status_cb,
+  .interface = {
+    .vendor_handler = NULL,
+    .class_handler = NULL,
+    .custom_handler = NULL,
+  },
+  .num_endpoints = ARRAY_SIZE(dirtyjtag_ep_cfg),
+  .endpoint = dirtyjtag_ep_cfg,
 };
-
-static const struct usbd_info info = {
-	.device = {
-		.desc = &dev_desc,
-		.string = &string
-	},
-
-	.config = {{
-		.desc = (const struct usb_config_descriptor *) &config_desc,
-		.string = &string
-	}}
-};
-
-static char hex_to_ascii(uint8_t c) {
-  return (c < 10) ? c + '0' : c + 'A' - 10;
-}
 
 void usb_read_serial(void) {
-  volatile uint8_t *uid;
-  size_t i;
-
-  uid = (volatile uint8_t *)0x1FFFF7E8;
-
-  for (i = 0; i < 12; i++) {
-    serial_string.wData[2*i] = hex_to_ascii((uid[i] & 0xF0) >> 4);
-    serial_string.wData[2*i+1] = hex_to_ascii(uid[i] & 0xF);
-  }
 }
 
-static void usb_set_config(usbd_device *usbd_dev,
-			   const struct usb_config_descriptor *cfg) {
-  (void)cfg;
+int usb_init(void) {
+  memset(rx_usb_buffer, 0, sizeof(rx_usb_buffer));
+  memset(tx_usb_buffer, 0, sizeof(tx_usb_buffer));
 
-  usbd_ep_prepare(usbd_dev, DIRTYJTAG_READ_ENDPOINT, USBD_EP_BULK, 64,
-		  USBD_INTERVAL_NA, USBD_EP_NONE);
-  usbd_ep_prepare(usbd_dev, DIRTYJTAG_WRITE_ENDPOINT, USBD_EP_BULK, 64,
-		  USBD_INTERVAL_NA, USBD_EP_NONE);
-
-  usb_prepare_rx(usbd_dev);
-}
-
-static void usb_control_request(usbd_device *usbd_dev, uint8_t ep,
-				const struct usb_setup_data *setup_data) {
-  (void) ep; /* assuming ep == 0 */
-
-  const uint8_t bmReqMask = USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT;
-  const uint8_t bmReqVal = USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE;
-
-  if ((setup_data->bmRequestType & bmReqMask) != bmReqVal) {
-    /* Pass on to usb stack internal */
-    usbd_ep0_setup(usbd_dev, setup_data);
-    return;
-  }
-
-  usbd_ep0_stall(usbd_dev);
-}
-
-void usb_init(void) {
-  usbd_device *usbd_dev;
-
-  usb_read_serial();
-
-  /* USB device initialisation */
-  usbd_dev = usbd_init(USBD_STM32_FSDEV, NULL, &info);
-  usbd_register_set_config_callback(usbd_dev, usb_set_config);
-  usbd_register_setup_callback(usbd_dev, usb_control_request);
-
-  while (1) {
-    usbd_poll(usbd_dev, 0);
-  }
+  return usb_enable(NULL);
 }
 
 void usb_reenumerate(void) {
-  gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
-  gpio_clear(GPIOA, GPIO12);
-
   delay_us(20000);
 }
 
-void usb_send(usbd_device *usbd_dev, uint8_t *sent_buffer, uint8_t sent_size) {
-  const usbd_transfer transfer = {
-    .ep_type = USBD_EP_BULK,
-    .ep_addr = DIRTYJTAG_WRITE_ENDPOINT,
-    .ep_size = DIRTYJTAG_USB_BUFFER_SIZE,
-    .ep_interval = USBD_INTERVAL_NA,
-    .buffer = tx_usb_buffer,
-    .length = sent_size,
-    .flags = USBD_FLAG_SHORT_PACKET,
-    .timeout = USBD_TIMEOUT_NEVER,
-    .callback = usb_tx_callback
-  };
+void usb_send(uint8_t *sent_buffer, uint8_t sent_size) {
+  uint32_t wrote = 0U;
 
-  /* Packets are copied into a buffer because the operation
-     is done asynchronously */
-  memcpy(tx_usb_buffer, sent_buffer, sent_size);
-
-  usbd_transfer_submit(usbd_dev, &transfer);
-}
-
-static uint8_t submit_buffer_index = 0;
-
-static void usb_prepare_rx(usbd_device *usbd_dev) {
-  const usbd_transfer transfer = {
-    .ep_type = USBD_EP_BULK,
-    .ep_addr = DIRTYJTAG_READ_ENDPOINT,
-    .ep_size = DIRTYJTAG_USB_BUFFER_SIZE,
-    .ep_interval = USBD_INTERVAL_NA,
-    .buffer = rx_usb_buffer[submit_buffer_index],
-    .length = DIRTYJTAG_USB_BUFFER_SIZE,
-    .flags = USBD_FLAG_SHORT_PACKET,
-    .timeout = USBD_TIMEOUT_NEVER,
-    .callback = usb_rx_callback
-  };
-
-  usbd_transfer_submit(usbd_dev, &transfer);
-  submit_buffer_index ^= 1;
-}
-
-static void usb_rx_callback(usbd_device *usbd_dev, const usbd_transfer *transfer,
-			    usbd_transfer_status status, usbd_urb_id urb_id) {
-  (void)urb_id;
-
-  if (status == USBD_SUCCESS) {
-    if (transfer->transferred) {
-      usb_prepare_rx(usbd_dev);
-      cmd_handle(usbd_dev, transfer);
-    } else {
-      usbd_transfer_submit(usbd_dev, transfer); /* re-submit */
-    }
+  if (sent_size > sizeof(tx_usb_buffer)) {
+    sent_size = sizeof(tx_usb_buffer);
   }
-}
 
-static void usb_tx_callback(usbd_device *usbd_dev, const usbd_transfer *transfer,
-			    usbd_transfer_status status, usbd_urb_id urb_id) {
-  (void)urb_id;
-  (void)transfer;
-  (void)usbd_dev;
-  (void)status;
+  memcpy(tx_usb_buffer, sent_buffer, sent_size);
+  (void)usb_write(DIRTYJTAG_WRITE_ENDPOINT, tx_usb_buffer, sent_size, &wrote);
 }
