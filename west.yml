@@ -6,6 +6,4 @@ manifest:
     - name: zephyr
       remote: zephyrproject-rtos
       revision: v4.4.1
-      import: true
-  self:
-    path: dirtyjtag
+      path: WORK/Gabor/paper_dispenser/fw/zephyrproject/zephyr

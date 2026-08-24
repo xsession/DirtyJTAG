@@ -5,16 +5,16 @@ separate from hardware access.
 
 ## Active Firmware Path
 
-The active build is rooted at `CMakeLists.txt` and uses these layers:
+The active build is rooted at `dirty_jtag/CMakeLists.txt` and uses these layers:
 
- * `src/cmd.*`: DirtyJTAG USB command protocol.
- * `src/jtag.*`: JTAG signal operations using Zephyr GPIO APIs and devicetree
+ * `dirty_jtag/src/cmd.*`: DirtyJTAG USB command protocol.
+ * `dirty_jtag/src/jtag.*`: JTAG signal operations using Zephyr GPIO APIs and devicetree
    pin descriptions.
- * `src/usb.*`: vendor-specific bulk USB transport using Zephyr's USB device
+ * `dirty_jtag/src/usb.*`: vendor-specific bulk USB transport using Zephyr's USB device
    stack.
- * `src/delay.*`: timing helpers using Zephyr kernel timing.
+ * `dirty_jtag/src/delay.*`: timing helpers using Zephyr kernel timing.
 
-Board portability comes from Zephyr board definitions and overlays in `boards/`.
+Board portability comes from Zephyr board definitions and overlays in `dirty_jtag/boards/`.
 The default `dirtyjtag_bluepill/stm32f103xb` board provides the JTAG pins
 through the `zephyr,user` node, while Zephyr provides clocks, startup, linker
 scripts, USB controller drivers, and GPIO drivers.

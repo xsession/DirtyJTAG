@@ -3,7 +3,7 @@ using sysbus
 mach create "dirtyjtag-bluepill"
 machine LoadPlatformDescription @platforms/boards/st/blue_pill_stm32f103.repl
 
-$elf?=@build/zephyr/zephyr.elf
+$elf?=@dirty_jtag/build/zephyr/zephyr.elf
 
 macro reset
 """

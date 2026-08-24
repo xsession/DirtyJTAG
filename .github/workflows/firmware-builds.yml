@@ -23,9 +23,6 @@ jobs:
       run: sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi make
     - name: Build
       run: |
-        make PLATFORM=bluepill
-        make PLATFORM=stlinkv2
-        make PLATFORM=stlinkv2dfu
-        make PLATFORM=baite
-        make PLATFORM=olimexstm32h103
-        make PLATFORM=stlinkv2white
+        make -C dirty_jtag BUILD_DIR=build-bluepill
+        make -C dirty_jtag BOARD=olimex_stm32_h103/stm32f103xb BUILD_DIR=build-olimex-stm32h103
+        make -C dirty_jtag BOARD=stm32_min_dev/stm32f103xb BUILD_DIR=build-stm32-min-dev

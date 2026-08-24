@@ -4,5 +4,8 @@ src/*.d
 src/*.o
 src/*.map
 build/
+build-*/
+dirty_jtag/build/
+dirty_jtag/build-*/
 *.bin
 *.elf

@@ -10,7 +10,7 @@ basic regression check.
 
 These notes were checked against:
 
-* DirtyJTAG `build/zephyr/zephyr.elf`
+* DirtyJTAG `dirty_jtag/build/zephyr/zephyr.elf`
 * installed Renode `1.15.3.22387`
 * `https://github.com/xsession/renode.git`, branch `custom-cores`, commit
   `6eb3f1f97a36f6f0e265455b6291ae1ee958cc68`
@@ -30,7 +30,7 @@ smoke test for:
 The stock CPU-level test command used was:
 
 ```powershell
-Renode --disable-gui --console --plain -e 'using sysbus; mach create; machine LoadPlatformDescription @platforms/cpus/stm32f103.repl; sysbus LoadELF @C:/GIT/DirtyJTAG/build/zephyr/zephyr.elf; start; emulation RunFor "0.1"; quit'
+Renode --disable-gui --console --plain -e 'using sysbus; mach create; machine LoadPlatformDescription @platforms/cpus/stm32f103.repl; sysbus LoadELF @C:/GIT/DirtyJTAG/dirty_jtag/build/zephyr/zephyr.elf; start; emulation RunFor "0.1"; quit'
 ```
 
 This loaded the ELF and started emulation, but produced repeated warnings around
