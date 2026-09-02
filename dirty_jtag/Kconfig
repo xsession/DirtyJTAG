@@ -20,6 +20,37 @@ config DIRTYJTAG_LEGACY_FRONTEND
 
 endchoice
 
+if DIRTYJTAG_LEGACY_FRONTEND
+
+choice DIRTYJTAG_LEGACY_TRANSPORT
+	prompt "Original DirtyJTAG transport"
+	default DIRTYJTAG_LEGACY_UART_TRANSPORT if SOC_ESP32
+	default DIRTYJTAG_LEGACY_USB_TRANSPORT
+
+config DIRTYJTAG_LEGACY_USB_TRANSPORT
+	bool "USB vendor bulk transport"
+	depends on USB_DEVICE_STACK_NEXT
+	help
+	  Use the original vendor-specific USB bulk endpoints.
+
+config DIRTYJTAG_LEGACY_UART_TRANSPORT
+	bool "UART packet transport"
+	depends on SERIAL
+	help
+	  Use the legacy command packets over the chosen console UART. This is
+	  intended for ESP32 boards whose USB connector is an external USB-UART
+	  bridge instead of a native USB device peripheral.
+
+endchoice
+
+config DIRTYJTAG_LEGACY_UART_RX_IDLE_MS
+	int "UART packet receive idle timeout"
+	depends on DIRTYJTAG_LEGACY_UART_TRANSPORT
+	range 1 100
+	default 2
+
+endif
+
 if DIRTYJTAG_UNIVERSAL_FRONTEND
 
 config DJPROG_MAX_PAYLOAD

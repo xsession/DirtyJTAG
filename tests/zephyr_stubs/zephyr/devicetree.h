@@ -2,6 +2,7 @@
 #define ZSTUB_DEVICETREE_H
 
 #define DT_ALIAS(name) name
+#define DT_CHOSEN(name) name
 #define DT_NODE_HAS_STATUS(node, status) 1
 #define DT_NODE_HAS_PROP(node, prop) 1
 #define BUILD_ASSERT(cond, msg) _Static_assert(cond, msg)

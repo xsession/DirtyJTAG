@@ -54,6 +54,10 @@ else()
     src/delay.c
     src/dirtyjtag.c
     src/jtag.c
-    src/usb.c
   )
+  if(CONFIG_DIRTYJTAG_LEGACY_UART_TRANSPORT)
+    target_sources(app PRIVATE src/usb_uart.c)
+  else()
+    target_sources(app PRIVATE src/usb.c)
+  endif()
 endif()

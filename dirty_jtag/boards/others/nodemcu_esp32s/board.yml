@@ -1,0 +1,6 @@
+board:
+  name: nodemcu_esp32s
+  full_name: NodeMCU ESP-32S
+  vendor: others
+  socs:
+    - name: esp32

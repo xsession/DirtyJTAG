@@ -16,7 +16,10 @@ rpi-pico:
 bluepill:
 	$(MAKE) zephyr-build BOARD=dirtyjtag_bluepill/stm32f103xb BUILD_DIR=build-bluepill CMAKE_EXTRA="-DEXTRA_CONF_FILE=legacy.conf"
 
-clean:
-	$(RM) -r $(BUILD_DIR) build-rpi-pico build-bluepill
+nodemcu-esp32s:
+	$(MAKE) zephyr-build BOARD=nodemcu_esp32s/esp32/procpu BUILD_DIR=build-nodemcu-esp32s CMAKE_EXTRA="-DEXTRA_CONF_FILE=esp32s_nodemcu.conf"
 
-.PHONY: all zephyr-build rpi-pico bluepill clean
+clean:
+	$(RM) -r $(BUILD_DIR) build-rpi-pico build-bluepill build-nodemcu-esp32s
+
+.PHONY: all zephyr-build rpi-pico bluepill nodemcu-esp32s clean

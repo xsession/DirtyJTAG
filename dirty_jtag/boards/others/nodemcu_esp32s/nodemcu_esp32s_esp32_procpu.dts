@@ -1,0 +1,93 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ */
+/dts-v1/;
+
+#include <espressif/esp32/esp32_wroom_32ue_n4.dtsi>
+#include "nodemcu_esp32s-pinctrl.dtsi"
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <espressif/partitions_0x1000_amp.dtsi>
+
+/ {
+	model = "NodeMCU ESP-32S PROCPU";
+	compatible = "espressif,esp32";
+
+	aliases {
+		uart-0 = &uart0;
+		sw0 = &button0;
+		led0 = &blue_led;
+		watchdog0 = &wdt0;
+	};
+
+	chosen {
+		zephyr,sram = &sram1;
+		zephyr,console = &uart0;
+		zephyr,shell-uart = &uart0;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+	};
+
+	zephyr,user {
+		/*
+		 * DirtyJTAG external probe header.
+		 * Avoid ESP32 boot strapping pins 0/2/4/5/12/15 so an attached
+		 * target cannot easily hold the module in the wrong boot mode.
+		 */
+		tck-gpios = <&gpio0 18 GPIO_ACTIVE_HIGH>;
+		tdo-gpios = <&gpio0 19 GPIO_ACTIVE_HIGH>;
+		tdi-gpios = <&gpio0 23 GPIO_ACTIVE_HIGH>;
+		tms-gpios = <&gpio0 21 GPIO_ACTIVE_HIGH>;
+		trst-gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>;
+		srst-gpios = <&gpio0 25 GPIO_ACTIVE_HIGH>;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		blue_led: blue_led {
+			gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+			label = "User LED";
+		};
+	};
+
+	buttons {
+		compatible = "gpio-keys";
+
+		button0: button_0 {
+			gpios = <&gpio0 0 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "BOOT Button";
+			zephyr,code = <INPUT_KEY_0>;
+		};
+	};
+};
+
+&uart0 {
+	status = "okay";
+	current-speed = <115200>;
+	pinctrl-0 = <&uart0_default>;
+	pinctrl-names = "default";
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+&timer0 {
+	status = "disabled";
+};
+
+&timer1 {
+	status = "disabled";
+};
+
+&timer2 {
+	status = "disabled";
+};
+
+&timer3 {
+	status = "disabled";
+};

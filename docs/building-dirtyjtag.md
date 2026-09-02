@@ -66,10 +66,31 @@ west build -p always -b olimex_stm32_h103/stm32f103xb dirty_jtag -- \
   -DEXTRA_CONF_FILE=legacy.conf
 ```
 
+NodeMCU ESP-32S boards are supported as a low-cost legacy JTAG bitbang adapter
+over their on-board USB-UART bridge:
+
+```
+west build -p always -b nodemcu_esp32s/esp32/procpu dirty_jtag -- \
+  -DEXTRA_CONF_FILE=esp32s_nodemcu.conf
+```
+
+The NodeMCU mapping intentionally avoids ESP32 boot strapping pins:
+
+| DirtyJTAG signal | ESP32 GPIO |
+|---|---:|
+| TCK | 18 |
+| TDO | 19 |
+| TDI | 23 |
+| TMS | 21 |
+| TRST | 22 |
+| SRST | 25 |
+
 The DJP2 CDC frontend currently uses Zephyr's compatibility USB device stack.
 The original vendor-class frontend uses `USB_DEVICE_STACK_NEXT`; `legacy.conf`
 switches the stack together with the frontend so incompatible APIs are never
-linked into one image.
+linked into one image. ESP32-WROOM NodeMCU boards do not expose a native USB
+device controller, so `esp32s_nodemcu.conf` selects the UART packet transport
+instead.
 
 Board-specific JTAG pins live in Zephyr board DTS files or overlays under
 `dirty_jtag/boards/`. To port DirtyJTAG to a new Zephyr board, define `tck-gpios`,

@@ -57,6 +57,20 @@ This package can run its host-independent tests without a Zephyr SDK:
 
 The native suite is compiled with `-Wall -Wextra -Werror`.
 
+## Build for NodeMCU ESP-32S
+
+The NodeMCU ESP-32S build uses the original DirtyJTAG JTAG command frontend over
+the board's USB-UART bridge:
+
+```sh
+west build -b nodemcu_esp32s/esp32/procpu dirty_jtag -- \
+  -DEXTRA_CONF_FILE=esp32s_nodemcu.conf
+west flash
+```
+
+Default JTAG header mapping: TCK=GPIO18, TDO=GPIO19, TDI=GPIO23, TMS=GPIO21,
+TRST=GPIO22, SRST=GPIO25.
+
 ## Host setup
 
 ```sh

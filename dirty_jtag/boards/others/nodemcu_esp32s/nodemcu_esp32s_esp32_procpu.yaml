@@ -1,0 +1,10 @@
+identifier: nodemcu_esp32s/esp32/procpu
+name: NodeMCU ESP-32S PROCPU
+vendor: others
+type: mcu
+arch: xtensa
+toolchain:
+  - zephyr
+supported:
+  - gpio
+  - uart
