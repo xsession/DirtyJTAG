@@ -1,0 +1,74 @@
+description: DirtyJTAG Raspberry Pi Pico universal front-end
+
+compatible: "dirtyjtag,pico-front-end"
+
+properties:
+  clk-gpios:
+    type: phandle-array
+    required: true
+  data0-gpios:
+    type: phandle-array
+    required: true
+  data1-gpios:
+    type: phandle-array
+    required: true
+  data2-gpios:
+    type: phandle-array
+    required: true
+  reset-gpios:
+    type: phandle-array
+    required: true
+  aux-gpios:
+    type: phandle-array
+    required: true
+
+  clk-dir-gpios:
+    type: phandle-array
+    required: true
+  data0-dir-gpios:
+    type: phandle-array
+    required: true
+  data1-dir-gpios:
+    type: phandle-array
+    required: true
+  data2-dir-gpios:
+    type: phandle-array
+    required: true
+  aux-dir-gpios:
+    type: phandle-array
+    required: true
+
+  tgt-reg-en-gpios:
+    type: phandle-array
+    required: true
+  tgt-vsel-gpios:
+    type: phandle-array
+    required: true
+  tgt-sw-en-gpios:
+    type: phandle-array
+    required: true
+  vpp-boost-en-gpios:
+    type: phandle-array
+    required: true
+  vpp-mclr-apply-gpios:
+    type: phandle-array
+    required: true
+  tgt-fault-n-gpios:
+    type: phandle-array
+    required: true
+  data0-iso-en-gpios:
+    type: phandle-array
+    required: true
+  hv-data0-apply-gpios:
+    type: phandle-array
+    required: true
+
+  vtarget-adc-channel:
+    type: int
+    required: true
+  vpp-adc-channel:
+    type: int
+    required: true
+  itarget-adc-channel:
+    type: int
+    required: true

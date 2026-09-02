@@ -8,7 +8,10 @@ app=dirty_jtag
 test_build=build/native
 mkdir -p "$test_build"
 
-cc -std=c11 -Wall -Wextra -Werror -I"$app/include" \
+: "${CC:=cc}"
+: "${PYTHON:=python3}"
+
+"$CC" -std=c11 -Wall -Wextra -Werror -I"$app/include" \
   -include tests/posix_errno_compat.h tests/test_core.c \
   "$app/src/crc32.c" "$app/src/hw.c" "$app/src/safety.c" \
   "$app/src/backends/backend_registry.c" "$app/src/phy_bitbang.c" \
@@ -28,14 +31,14 @@ cc -std=c11 -Wall -Wextra -Werror -I"$app/include" \
   "$app/src/swo.c" "$app/src/usb_proto.c" -o "$test_build/test_core"
 "$test_build/test_core"
 
-python3 -m py_compile host/djprog.py host/openocd_bridge.py host/dfp_inspect.py host/hex_utils.py host/avr_utils.py host/updi_utils.py host/msp430_utils.py host/tms320_utils.py host/simplelink_utils.py host/bridge_tools.py host/production_jobs.py host/rtt_tools.py host/vendor_features.py
-python3 tests/test_hex_utils.py
-python3 tests/test_avr_utils.py
-python3 tests/test_updi_utils.py
-python3 tests/test_msp430_utils.py
-python3 tests/test_tms320_utils.py
-python3 tests/test_rtt_tools.py
-python3 tests/test_vendor_features.py
-python3 tests/test_simplelink_utils.py
-python3 tests/test_bridge_tools.py
-python3 tests/test_production_jobs.py
+"$PYTHON" -m py_compile host/djprog.py host/openocd_bridge.py host/dfp_inspect.py host/hex_utils.py host/avr_utils.py host/updi_utils.py host/msp430_utils.py host/tms320_utils.py host/simplelink_utils.py host/bridge_tools.py host/production_jobs.py host/rtt_tools.py host/vendor_features.py
+"$PYTHON" tests/test_hex_utils.py
+"$PYTHON" tests/test_avr_utils.py
+"$PYTHON" tests/test_updi_utils.py
+"$PYTHON" tests/test_msp430_utils.py
+"$PYTHON" tests/test_tms320_utils.py
+"$PYTHON" tests/test_rtt_tools.py
+"$PYTHON" tests/test_vendor_features.py
+"$PYTHON" tests/test_simplelink_utils.py
+"$PYTHON" tests/test_bridge_tools.py
+"$PYTHON" tests/test_production_jobs.py

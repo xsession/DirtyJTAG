@@ -2,13 +2,53 @@
 #include <zephyr/dt-bindings/gpio/gpio.h>
 
 / {
+	aliases {
+		dirtyjtag-pico = &dirtyjtag_pico;
+	};
+
 	zephyr,user {
 		tck-gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
-		tdo-gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
+		tms-gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
 		tdi-gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>;
-		tms-gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
-		trst-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
-		srst-gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>;
+		tdo-gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+		srst-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+		trst-gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>;
+	};
+
+	dirtyjtag_pico: dirtyjtag-pico {
+		compatible = "dirtyjtag,pico-front-end";
+		status = "okay";
+
+		/*
+		 * Universal target connector roles:
+		 * CLK=J1.3, DATA0=J1.4, DATA1=J1.5, DATA2=J1.6,
+		 * RESET/VPP=J1.7, AUX=J1.9.
+		 */
+		clk-gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+		data0-gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
+		data1-gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>;
+		data2-gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+		aux-gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>;
+
+		clk-dir-gpios = <&gpio0 8 GPIO_ACTIVE_HIGH>;
+		data0-dir-gpios = <&gpio0 9 GPIO_ACTIVE_HIGH>;
+		data1-dir-gpios = <&gpio0 10 GPIO_ACTIVE_HIGH>;
+		data2-dir-gpios = <&gpio0 11 GPIO_ACTIVE_HIGH>;
+		aux-dir-gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>;
+
+		tgt-reg-en-gpios = <&gpio0 13 GPIO_ACTIVE_HIGH>;
+		tgt-vsel-gpios = <&gpio0 14 GPIO_ACTIVE_HIGH>;
+		tgt-sw-en-gpios = <&gpio0 15 GPIO_ACTIVE_HIGH>;
+		vpp-boost-en-gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
+		vpp-mclr-apply-gpios = <&gpio0 17 GPIO_ACTIVE_HIGH>;
+		tgt-fault-n-gpios = <&gpio0 18 GPIO_ACTIVE_LOW>;
+		data0-iso-en-gpios = <&gpio0 19 GPIO_ACTIVE_HIGH>;
+		hv-data0-apply-gpios = <&gpio0 20 GPIO_ACTIVE_HIGH>;
+
+		vtarget-adc-channel = <0>;	/* GP26 / ADC0, x2 divider */
+		vpp-adc-channel = <1>;		/* GP27 / ADC1, x4.3 divider */
+		itarget-adc-channel = <2>;	/* GP28 / ADC2, 5 mV/mA */
 	};
 };
 

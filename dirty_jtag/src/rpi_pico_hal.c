@@ -2,10 +2,30 @@
 #include "djprog/hw.h"
 #include "djprog/swim_phy.h"
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 #include <errno.h>
+
+#define DJ_PICO_NODE DT_ALIAS(dirtyjtag_pico)
+#define GPIO_PROP(role, prop) GPIO_DT_SPEC_GET(DJ_PICO_NODE, prop##_gpios)
+#define ADC_CHANNEL(prop) DT_PROP(DJ_PICO_NODE, prop##_adc_channel)
+
+BUILD_ASSERT(DT_NODE_HAS_STATUS(DJ_PICO_NODE, okay),
+             "rpi_pico overlay must define dirtyjtag-pico");
+BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, clk_gpios),
+             "dirtyjtag-pico must define clk-gpios");
+BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, data0_gpios),
+             "dirtyjtag-pico must define data0-gpios");
+BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, data1_gpios),
+             "dirtyjtag-pico must define data1-gpios");
+BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, data2_gpios),
+             "dirtyjtag-pico must define data2-gpios");
+BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, reset_gpios),
+             "dirtyjtag-pico must define reset-gpios");
+BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, aux_gpios),
+             "dirtyjtag-pico must define aux-gpios");
 
 /*
  * Raspberry Pi Pico universal-programmer front end.
@@ -16,21 +36,38 @@
  */
 static const struct device *gpio = DEVICE_DT_GET(DT_NODELABEL(gpio0));
 static const struct device *adc  = DEVICE_DT_GET(DT_NODELABEL(adc));
-static struct dj_pinmap map = {{2, 3, 4, 5, 6, 7}};
-static const uint8_t dir_gpio[DJ_PIN_COUNT] = {8, 9, 10, 11, 0, 12};
+static struct dj_pinmap map;
 
-#define PIN_TGT_REG_EN       13 /* TPS630702 EN */
-#define PIN_TGT_VSEL         14 /* low=3.3 V, high=~5.0 V */
-#define PIN_TGT_SW_EN        15 /* TPS2553 EN */
-#define PIN_VPP_BOOST        16 /* TPS61040 EN */
-#define PIN_VPP_APPLY        17 /* NPN -> PMOS high-side gate */
-#define PIN_TGT_FAULT_N      18 /* TPS2553 FAULT#, active low */
-#define PIN_DATA0_ISO_EN     19 /* TMUX4827: normal DATA0 path */
-#define PIN_HV_DATA0_APPLY   20 /* Q4/Q5: 11.8V activation pulse */
+static const struct gpio_dt_spec signal_gpio[DJ_PIN_COUNT] = {
+    GPIO_PROP(clk, clk),
+    GPIO_PROP(data0, data0),
+    GPIO_PROP(data1, data1),
+    GPIO_PROP(data2, data2),
+    GPIO_PROP(reset, reset),
+    GPIO_PROP(aux, aux),
+};
 
-#define ADC_CH_VTARGET       0  /* GP26, 100k/100k => x2 */
-#define ADC_CH_VPP           1  /* GP27, 330k/100k => x4.3 */
-#define ADC_CH_ITARGET       2  /* GP28, INA180A2, 0.1R shunt */
+static const struct gpio_dt_spec dir_gpio[DJ_PIN_COUNT] = {
+    GPIO_PROP(clk_dir, clk_dir),
+    GPIO_PROP(data0_dir, data0_dir),
+    GPIO_PROP(data1_dir, data1_dir),
+    GPIO_PROP(data2_dir, data2_dir),
+    {0},
+    GPIO_PROP(aux_dir, aux_dir),
+};
+
+static const struct gpio_dt_spec tgt_reg_en = GPIO_PROP(tgt_reg_en, tgt_reg_en);
+static const struct gpio_dt_spec tgt_vsel = GPIO_PROP(tgt_vsel, tgt_vsel);
+static const struct gpio_dt_spec tgt_sw_en = GPIO_PROP(tgt_sw_en, tgt_sw_en);
+static const struct gpio_dt_spec vpp_boost = GPIO_PROP(vpp_boost_en, vpp_boost_en);
+static const struct gpio_dt_spec vpp_apply = GPIO_PROP(vpp_mclr_apply, vpp_mclr_apply);
+static const struct gpio_dt_spec tgt_fault_n = GPIO_PROP(tgt_fault_n, tgt_fault_n);
+static const struct gpio_dt_spec data0_iso_en = GPIO_PROP(data0_iso_en, data0_iso_en);
+static const struct gpio_dt_spec hv_data0_apply = GPIO_PROP(hv_data0_apply, hv_data0_apply);
+
+#define ADC_CH_VTARGET       ADC_CHANNEL(vtarget)
+#define ADC_CH_VPP           ADC_CHANNEL(vpp)
+#define ADC_CH_ITARGET       ADC_CHANNEL(itarget)
 
 static bool reset_asserted;
 static bool boost_on;
@@ -53,34 +90,48 @@ static int adc_setup_channel(uint8_t ch)
 static int init(void)
 {
     if (!device_is_ready(gpio) || !device_is_ready(adc)) return -ENODEV;
+    for (int i = 0; i < DJ_PIN_COUNT; ++i) {
+        if (!gpio_is_ready_dt(&signal_gpio[i])) return -ENODEV;
+        map.gpio[i] = signal_gpio[i].pin;
+    }
+    for (int i = 0; i < DJ_PIN_COUNT; ++i) {
+        if (i == DJ_PIN_RESET) continue;
+        if (!gpio_is_ready_dt(&dir_gpio[i])) return -ENODEV;
+    }
+    if (!gpio_is_ready_dt(&tgt_reg_en) || !gpio_is_ready_dt(&tgt_vsel) ||
+        !gpio_is_ready_dt(&tgt_sw_en) || !gpio_is_ready_dt(&vpp_boost) ||
+        !gpio_is_ready_dt(&vpp_apply) || !gpio_is_ready_dt(&tgt_fault_n) ||
+        !gpio_is_ready_dt(&data0_iso_en) || !gpio_is_ready_dt(&hv_data0_apply)) {
+        return -ENODEV;
+    }
 
     /* Target signal A-side pins start high-Z. */
     for (int i = 0; i < DJ_PIN_COUNT; ++i) {
         if (i == DJ_PIN_RESET) continue;
-        int r = gpio_pin_configure(gpio, map.gpio[i], GPIO_INPUT);
+        int r = gpio_pin_configure_dt(&signal_gpio[i], GPIO_INPUT);
         if (r) return r;
     }
 
     /* RESET sink gate low means released. */
-    int r = gpio_pin_configure(gpio, map.gpio[DJ_PIN_RESET], GPIO_OUTPUT_INACTIVE);
+    int r = gpio_pin_configure_dt(&signal_gpio[DJ_PIN_RESET], GPIO_OUTPUT_INACTIVE);
     if (r) return r;
 
     /* All translators face target->Pico in idle state. */
     for (int i = 0; i < DJ_PIN_COUNT; ++i) {
         if (i == DJ_PIN_RESET) continue;
-        r = gpio_pin_configure(gpio, dir_gpio[i], GPIO_OUTPUT_INACTIVE);
+        r = gpio_pin_configure_dt(&dir_gpio[i], GPIO_OUTPUT_INACTIVE);
         if (r) return r;
     }
 
-    const uint8_t outputs[] = {
-        PIN_TGT_REG_EN, PIN_TGT_VSEL, PIN_TGT_SW_EN,
-        PIN_VPP_BOOST, PIN_VPP_APPLY, PIN_DATA0_ISO_EN, PIN_HV_DATA0_APPLY,
+    const struct gpio_dt_spec *outputs[] = {
+        &tgt_reg_en, &tgt_vsel, &tgt_sw_en,
+        &vpp_boost, &vpp_apply, &data0_iso_en, &hv_data0_apply,
     };
     for (size_t i = 0; i < sizeof(outputs) / sizeof(outputs[0]); ++i) {
-        r = gpio_pin_configure(gpio, outputs[i], GPIO_OUTPUT_INACTIVE);
+        r = gpio_pin_configure_dt(outputs[i], GPIO_OUTPUT_INACTIVE);
         if (r) return r;
     }
-    r = gpio_pin_configure(gpio, PIN_TGT_FAULT_N, GPIO_INPUT | GPIO_PULL_UP);
+    r = gpio_pin_configure_dt(&tgt_fault_n, GPIO_INPUT | GPIO_PULL_UP);
     if (r) return r;
 
     for (uint8_t ch = ADC_CH_VTARGET; ch <= ADC_CH_ITARGET; ++ch) {
@@ -92,7 +143,7 @@ static int init(void)
     boost_on = false;
     vpp_on = false;
     hv_data0_on = false;
-    gpio_pin_set(gpio, PIN_DATA0_ISO_EN, 0);
+    gpio_pin_set_dt(&data0_iso_en, 0);
     power_mode = DJ_PWR_OFF;
     return 0;
 }
@@ -109,12 +160,12 @@ static int dir(enum dj_pin_role role, enum dj_dir d)
 {
     if (role >= DJ_PIN_COUNT) return -EINVAL;
     if (role == DJ_PIN_RESET) return 0;
-    if (role == DJ_PIN_DATA0 && !hv_data0_on) gpio_pin_set(gpio, PIN_DATA0_ISO_EN, 1);
+    if (role == DJ_PIN_DATA0 && !hv_data0_on) gpio_pin_set_dt(&data0_iso_en, 1);
 
     uint8_t p = map.gpio[role];
     if (d == DJ_DIR_INPUT || d == DJ_DIR_RELEASE) {
         /* Remove target drive first, then make Pico input. */
-        int r = gpio_pin_set(gpio, dir_gpio[role], 0);
+        int r = gpio_pin_set_dt(&dir_gpio[role], 0);
         if (r) return r;
         return gpio_pin_configure(gpio, p, GPIO_INPUT);
     }
@@ -126,14 +177,14 @@ static int dir(enum dj_pin_role role, enum dj_dir d)
         signal_latch[role] = false;
         int r = gpio_pin_configure(gpio, p, GPIO_OUTPUT_INACTIVE);
         if (r) return r;
-        return gpio_pin_set(gpio, dir_gpio[role], 1);
+        return gpio_pin_set_dt(&dir_gpio[role], 1);
     }
 
     /* Preload A-side value before enabling A->B to avoid a direction glitch. */
     int r = gpio_pin_configure(gpio, p,
         signal_latch[role] ? GPIO_OUTPUT_ACTIVE : GPIO_OUTPUT_INACTIVE);
     if (r) return r;
-    return gpio_pin_set(gpio, dir_gpio[role], 1);
+    return gpio_pin_set_dt(&dir_gpio[role], 1);
 }
 
 static int wr(enum dj_pin_role role, bool value)
@@ -233,17 +284,17 @@ static int measure(struct dj_measurement *m)
     /* 0.1 ohm * INA180A2 gain 50 => 5 mV/mA. */
     m->itarget_ma = (mv + 2u) / 5u;
 
-    int fault_n = gpio_pin_get(gpio, PIN_TGT_FAULT_N);
-    if (fault_n < 0) return fault_n;
-    m->power_fault = fault_n == 0;
+    int fault = gpio_pin_get_dt(&tgt_fault_n);
+    if (fault < 0) return fault;
+    m->power_fault = fault != 0;
     return 0;
 }
 
 static void local_power_off(void)
 {
-    gpio_pin_set(gpio, PIN_TGT_SW_EN, 0);
+    gpio_pin_set_dt(&tgt_sw_en, 0);
     k_sleep(K_MSEC(1));
-    gpio_pin_set(gpio, PIN_TGT_REG_EN, 0);
+    gpio_pin_set_dt(&tgt_reg_en, 0);
 }
 
 static int power(enum dj_power_mode m)
@@ -260,10 +311,10 @@ static int power(enum dj_power_mode m)
         return 0;
     }
 
-    gpio_pin_set(gpio, PIN_TGT_VSEL, m == DJ_PWR_5V ? 1 : 0);
-    gpio_pin_set(gpio, PIN_TGT_REG_EN, 1);
+    gpio_pin_set_dt(&tgt_vsel, m == DJ_PWR_5V ? 1 : 0);
+    gpio_pin_set_dt(&tgt_reg_en, 1);
     k_sleep(K_MSEC(3));
-    gpio_pin_set(gpio, PIN_TGT_SW_EN, 1);
+    gpio_pin_set_dt(&tgt_sw_en, 1);
     k_sleep(K_MSEC(3));
 
     struct dj_measurement x = {0};
@@ -281,15 +332,15 @@ static int power(enum dj_power_mode m)
 static int vboost(bool on)
 {
     if (!on && hv_data0_on) {
-        gpio_pin_set(gpio, PIN_HV_DATA0_APPLY, 0);
+        gpio_pin_set_dt(&hv_data0_apply, 0);
         hv_data0_on = false;
     }
     if (!on && vpp_on) {
-        gpio_pin_set(gpio, PIN_VPP_APPLY, 0);
+        gpio_pin_set_dt(&vpp_apply, 0);
         vpp_on = false;
     }
     boost_on = on;
-    gpio_pin_set(gpio, PIN_VPP_BOOST, on ? 1 : 0);
+    gpio_pin_set_dt(&vpp_boost, on ? 1 : 0);
     if (on) k_sleep(K_MSEC(5));
     return 0;
 }
@@ -306,7 +357,7 @@ static int vapply(bool on)
         if (m.vpp_mv < 10500u || m.vpp_mv > 13500u) return -ERANGE;
     }
     vpp_on = on;
-    return gpio_pin_set(gpio, PIN_VPP_APPLY, on ? 1 : 0);
+    return gpio_pin_set_dt(&vpp_apply, on ? 1 : 0);
 }
 
 static int hvdata0(bool on)
@@ -321,13 +372,13 @@ static int hvdata0(bool on)
         /* Hardware is intentionally designed for an ~11.8 V shared VPP rail. */
         if (m.vpp_mv < 10500u || m.vpp_mv > 12000u) return -ERANGE;
         /* Disconnect 5.5 V translator before applying HV to target DATA0. */
-        gpio_pin_set(gpio, PIN_DATA0_ISO_EN, 0);
-        gpio_pin_set(gpio, dir_gpio[DJ_PIN_DATA0], 0);
+        gpio_pin_set_dt(&data0_iso_en, 0);
+        gpio_pin_set_dt(&dir_gpio[DJ_PIN_DATA0], 0);
         gpio_pin_configure(gpio, map.gpio[DJ_PIN_DATA0], GPIO_INPUT);
         k_busy_wait(10);
     }
     hv_data0_on = on;
-    int r = gpio_pin_set(gpio, PIN_HV_DATA0_APPLY, on ? 1 : 0);
+    int r = gpio_pin_set_dt(&hv_data0_apply, on ? 1 : 0);
     if (!on) k_busy_wait(10);
     return r;
 }
