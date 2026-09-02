@@ -1,0 +1,38 @@
+menu "DirtyJTAG Universal Programmer + Debugger"
+config DJPROG_MAX_PAYLOAD
+    int "Maximum DJP2 payload"
+    range 256 4096
+    default 2048
+    help
+      Largest request/response payload buffered by the USB command task.
+
+config DJPROG_VPP_MIN_MV
+    int "Minimum accepted VPP"
+    default 10500
+
+config DJPROG_VPP_MAX_MV
+    int "Maximum accepted VPP"
+    default 13250
+
+
+config DJPROG_SWIM_RP2040_PIO
+    bool "Use RP2040 PIO-assisted STM8 SWIM PHY"
+    default y if SOC_RP2040
+    help
+      Bind an RP2040 PIO state machine as the preferred STM8 SWIM packet PHY
+      on Raspberry Pi Pico builds.  Rev E offloads timing-critical transmit
+      pulses to PIO while keeping the receive path conservative and bench-
+      calibratable.  Native tests continue to use the mock/GPIO PHY.
+
+config DJPROG_SWIM_PIO_DEFAULT_HZ
+    int "Default STM8 SWIM PIO low-speed clock"
+    default 363000
+    range 100000 8000000
+
+config DJPROG_TARGET_CURRENT_LIMIT_MA
+    int "Nominal hardware target current limit"
+    default 500
+    help
+      Documentation value for the fitted TPS2553 RILIM. The hardware limiter,
+      not firmware, enforces the actual current limit.
+endmenu

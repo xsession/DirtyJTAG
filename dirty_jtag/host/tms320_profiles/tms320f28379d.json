@@ -1,0 +1,18 @@
+{
+  "device": "TMS320F28379D",
+  "family": "C2000 Delfino F2837xD",
+  "core": "dual C28x + dual CLA",
+  "interface": "ieee1149.1-jtag",
+  "connector": "TI-14/CTI-20 via adapter",
+  "ir_length": 6,
+  "default_clock_hz": 1000000,
+  "vtref_mv_min": 1800,
+  "vtref_mv_max": 3600,
+  "implemented": {
+    "jtag_tap": true,
+    "idcode_scan": true,
+    "openocd_remote_bitbang_transport": "transport only; multi-TAP/core chain needs host target support",
+    "ccs_xds110_usb_emulation": false,
+    "flash_programming": false
+  }
+}

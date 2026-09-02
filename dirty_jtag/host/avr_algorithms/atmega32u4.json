@@ -1,0 +1,12 @@
+{
+  "device": "atmega32u4",
+  "family": "classic-avr-usb",
+  "protocol": "avr-isp",
+  "signature": [30, 149, 135],
+  "flash_size": 32768,
+  "page_size": 128,
+  "eeprom_size": 1024,
+  "fuses": {"lfuse": true, "hfuse": true, "efuse": true, "lock": true},
+  "implemented": {"isp_enter": true, "signature": true, "chip_erase": true, "flash_read": true, "flash_write": true, "flash_verify": true, "fuse_read": true, "fuse_write": true, "bootloader_protect": "host-policy-needed"},
+  "notes": ["Leonardo/Micro class part; use --no-verify only if target code disables readback protection."]
+}

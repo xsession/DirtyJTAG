@@ -1,0 +1,12 @@
+manifest:
+  version: "1.2"
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+  projects:
+    - name: zephyr
+      remote: zephyrproject-rtos
+      revision: v4.3.0
+      import: true
+  self:
+    path: DirtyJTAG-Universal-Pico

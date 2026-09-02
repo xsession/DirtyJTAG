@@ -1,0 +1,19 @@
+{
+  "device": "attiny817",
+  "family": "tinyavr-1",
+  "protocol": "updi",
+  "flash_size": 8192,
+  "page_size": 64,
+  "flash_base": 32768,
+  "eeprom_size": 128,
+  "nvm_version": "nvmctrl-v0/1-style",
+  "implemented": {
+    "raw_updi": true,
+    "hex_plan": true,
+    "nvm_key_sequence": "descriptor-only",
+    "flash_write": "guarded-experimental"
+  },
+  "notes": [
+    "Flash base/page size must be verified against the exact ATtiny817 data sheet and DFP before first destructive write."
+  ]
+}

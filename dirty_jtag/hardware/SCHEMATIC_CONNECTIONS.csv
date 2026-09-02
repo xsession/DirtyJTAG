@@ -1,0 +1,31 @@
+Net,From,To,Notes
+VBUS_5V,USB/Pico VBUS,U1 VIN;U3 VIN,Input power
+TGT_REG_RAW,U1 VOUT,U2 IN,Selectable 3.3/5V
+VTARGET,U2 OUT,J1.1;translators VCCB;RSENSE path,Target supply/reference
+TGT_FAULT_N,U2 FAULT#,Pico GP18,Pull up to 3.3V
+ITARGET_SENSE,INA180A2 OUT,Pico GP28 ADC2,0.1R shunt Kelvin sensed
+SIG_CLK_A,Pico GP2,U5 A,3.3V logic
+DIR_CLK,Pico GP8,U5 DIR,
+SIG_CLK_B,U5 B,R11 then J1.3,
+SIG_DATA0_A,Pico GP3,U6 A,3.3V logic
+DIR_DATA0,Pico GP9,U6 DIR,
+SIG_DATA0_B,U6 B,U10 normal-path input,Translator protected from HV by U10
+DATA0_ISO_EN,Pico GP19,U10 EN,Normal path enable
+TARGET_DATA0,U10 output,R12 then J1.4;Q4/JP2/R34 HV injection node,
+SIG_DATA1_A,Pico GP4,U7 A,
+DIR_DATA1,Pico GP10,U7 DIR,
+SIG_DATA1_B,U7 B,R13 then J1.5,
+SIG_DATA2_A,Pico GP5,U8 A,
+DIR_DATA2,Pico GP11,U8 DIR,
+SIG_DATA2_B,U8 B,R14 then J1.6,
+SIG_AUX_A,Pico GP7,U9 A,
+DIR_AUX,Pico GP12,U9 DIR,
+SIG_AUX_B,U9 B,R15 then J1.9,
+RESET_LOW_CTL,Pico GP6,Q3 gate,Open-drain reset sink
+RESET_VPP,Q3 drain;Q1/JP1/R10,J1.7 and J2 MCLR,VPP/reset target net
+VPP_BOOST_EN,Pico GP16,U3 EN,
+VPP11V8,U3 OUT,Q1 source;Q4 source;ADC divider,Nominal 11.8V
+VPP_MCLR_APPLY,Pico GP17,Q2 base network,Controls Q1
+HV_DATA0_APPLY,Pico GP20,Q5 base network,Controls Q4
+VTARGET_ADC,VTARGET divider,Pico GP26 ADC0,x2 scale
+VPP_ADC,VPP divider,Pico GP27 ADC1,x4.3 scale

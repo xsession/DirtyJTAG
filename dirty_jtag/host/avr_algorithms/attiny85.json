@@ -1,0 +1,12 @@
+{
+  "device": "attiny85",
+  "family": "classic-avr",
+  "protocol": "avr-isp",
+  "signature": [30, 147, 11],
+  "flash_size": 8192,
+  "page_size": 64,
+  "eeprom_size": 512,
+  "fuses": {"lfuse": true, "hfuse": true, "efuse": true, "lock": true},
+  "implemented": {"isp_enter": true, "signature": true, "chip_erase": true, "flash_read": true, "flash_write": true, "flash_verify": true, "fuse_read": true, "fuse_write": true, "eeprom_raw": "raw-instruction"},
+  "notes": ["Small classic ISP target; good first smoke-test part because it uses only low-voltage SPI ISP."]
+}

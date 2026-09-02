@@ -1,0 +1,39 @@
+Ref,Qty,Value/Part,Description,Package,Notes
+PICO1,1,Raspberry Pi Pico or Pico H,RP2040 controller,module,Zephyr rpi_pico
+U1,1,TPS630702,3.3/5.0V selectable buck-boost,QFN-15,Use TI EVM 3.3/5V scaling topology
+U2,1,TPS2553,Current-limited target power switch,SOT-23-6,59k RILIM for <=~500mA max per TI example
+U3,1,TPS61040,VPP boost to ~11.8V,SOT-23-5,Shared MCLR/UPDI activation rail
+U4,1,INA180A2,Current sense amplifier gain 50,SOT-23-5,0.1R shunt -> GP28 ADC2
+U5-U9,5,SN74LVC1T45,Single-bit dual-supply translator,SOT-23-6,VCCA=3.3V VCCB=VTARGET separate DIR
+U10,1,TMUX4827,Overvoltage-tolerant bidirectional switch,UQFN/TI package,Use one channel to isolate DATA0 translator during UPDI HV
+Q1 Q4,2,AO3401A,-30V P-MOS high-side HV switches,SOT-23,MCLR VPP and DATA0 HV respectively
+Q2 Q5,2,MMBT3904,NPN high-side gate drivers,SOT-23,Driven from GP17 and GP20
+Q3,1,2N7002,Open-drain RESET/MCLR sink,SOT-23,GP6 control
+D1,1,SS14,Boost rectifier,SMA,TPS61040
+D2,1,SMBJ13A,VPP rail TVS,SMB,Verify clamp does not violate final VPP tolerance
+D3 D4,2,BZT52C8V2,8.2V VGS clamp,SOD-123,Q1 and Q4 gate-source protection
+L1,1,10uH >=0.7A,VPP boost inductor,1210,TPS61040
+L2,1,1.5uH or per current TPS630702 EVM,Buck-boost inductor,manufacturer footprint,Select from TI datasheet/EVM
+RSENSE,1,0.1R 1% >=0.25W,Target current shunt,1206,Kelvin route
+RILIM,1,59k 1%,TPS2553 current limit,0603,TI <=500mA design example
+R31,1,856k 1%,VPP FB upper,0603,Target ~11.8V; verify with final TPS61040 datasheet
+R32,1,100k 1%,VPP FB lower,0603,
+R35,1,330k 1%,VPP ADC upper,0603,
+R36,1,100k 1%,VPP ADC lower,0603,
+R37 R38,2,100k 1%,VTARGET ADC divider,0603,
+R39 R41,2,100k,HV P-MOS gate pullups,0603,Q1/Q4
+R40 R42,2,10k,NPN base resistors,0603,Q2/Q5
+R43 R44,2,100k,NPN base pulldowns,0603,Q2/Q5
+R10,1,100R,MCLR/VPP series resistor,0603,
+R11-R15,5,33R,Signal series damping,0603,CLK DATA0 DATA1 DATA2 AUX
+R16,1,4.7k,Optional DATA0 pull-up to VTARGET,0603,DNP unless required
+R34,1,1k,UPDI HV pulse series resistor,0603,Limits transient contention current
+Cbulk,3,10uF,Power bulk capacitors,0805,VBUS regulator and VTARGET
+Cvpp,1,4.7uF 25V,VPP output capacitor,0805/1206,
+Cdec,12,100nF,Local decoupling,0603,At every IC supply
+JP1,1,VPP_MCLR_ENABLE,Physical HV authorization,2-pin header,Default OPEN
+JP2,1,UPDI_HV_ENABLE,Physical DATA0 HV authorization,2-pin header,Default OPEN
+J1,1,Universal target,2x5 2.54mm,header,Primary protocol connector
+J2,1,Microchip ICSP,1x6 2.54mm,header,MCLR VTGT GND PGD PGC AUX
+J3,1,AVR ISP,2x3 2.54mm,header,MISO VTGT SCK MOSI RESET GND
+J4,1,Cortex Debug,2x5 1.27mm,header,SWD/JTAG adapter

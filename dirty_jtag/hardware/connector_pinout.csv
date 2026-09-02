@@ -1,0 +1,11 @@
+UniversalPin,Net,TypicalUse
+1,VTARGET,Target reference/supply
+2,GND,Ground
+3,SIG_CLK,PGC/SCK/SWCLK/SBWTCK/C2CK/PDI_CLK
+4,SIG_DATA0,PGD/UPDI/TPI/PDI_DATA/SWIM/SBWTDIO/C2D/TOOL0/SWDIO
+5,SIG_DATA1,MOSI/TDI/TMS selectable role
+6,SIG_DATA2,MISO/TDO/SWO selectable role
+7,RESET_VPP,MCLR/VPP or open-drain nRESET; NOT PDI clock
+8,GND,Ground return
+9,SIG_AUX,Extra JTAG/UART/device-specific signal
+10,NC,Reserved

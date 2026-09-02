@@ -1,0 +1,16 @@
+{
+  "device": "msp430g2553",
+  "family": "msp430x2xx-flash",
+  "default_interface": "sbw",
+  "address_bits": 16,
+  "flash_start": 49152,
+  "flash_size": 16384,
+  "segment_size": 512,
+  "write_block": 2,
+  "ram_start": 512,
+  "ram_size": 512,
+  "info_start": 4096,
+  "info_size": 256,
+  "implemented": {"tap_raw": true, "txt_hex_plan": true, "erase_write": "guarded"},
+  "notes": ["LaunchPad-era MSP430G2 family; SBW is the practical default interface."]
+}

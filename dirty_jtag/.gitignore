@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.cmake/
+build/
+out/
+dist/
+tests/test_core
+*.uf2
+*.elf
+*.bin
+*.hex.tmp
+.DS_Store

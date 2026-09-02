@@ -1,0 +1,19 @@
+{
+  "schema": "dirtyjtag.algorithm.v1",
+  "device": "dsPIC30F4011",
+  "family": "dsPIC30F",
+  "programming_spec": "Microchip DS70102K / dsPIC30F Flash Programming Specification",
+  "row_words": 32,
+  "user_end_pc": "0x007FFE",
+  "target_power_mv": [4500, 5500],
+  "requires_mclr_vpp": true,
+  "implemented": {
+    "icsp_entry": true,
+    "device_id_read": true,
+    "bulk_erase": true,
+    "row_write": true,
+    "readback_verify": true,
+    "configuration_words": false,
+    "debug_executive": "capsule/control-plane only"
+  }
+}

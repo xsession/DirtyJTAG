@@ -1,0 +1,19 @@
+{
+  "device": "TMS320F2800137",
+  "family": "C2000 Piccolo F28001x",
+  "core": "C28x",
+  "interface": "ieee1149.1-jtag",
+  "connector": "TI-14/CTI-20 via adapter",
+  "ir_length": 6,
+  "default_clock_hz": 1000000,
+  "vtref_mv_min": 1800,
+  "vtref_mv_max": 3600,
+  "implemented": {
+    "jtag_tap": true,
+    "idcode_scan": true,
+    "openocd_remote_bitbang_transport": "transport only; C2000 target semantics are host/tool dependent",
+    "ccs_xds110_usb_emulation": false,
+    "flash_programming": false
+  },
+  "notes": "Initial user-priority C2000 target; use 3.3 V VTREF/external target power and keep 5 V disabled."
+}

@@ -1,0 +1,35 @@
+digraph G {
+  graph [rankdir=LR, splines=ortho, nodesep=0.35, ranksep=0.55, bgcolor="white", label="DirtyJTAG Universal Pico Programmer + Debugger Front-End Rev B", labelloc=t, fontsize=18];
+  node [shape=box, fontsize=10]; edge [fontsize=9];
+  usb [label="USB 5 V"];
+  pico [label="Raspberry Pi Pico / RP2040\nZephyr + USB DJP2"];
+  reg [label="U1 TPS630702\n3.3 / 5.0 V selectable"];
+  sw [label="U2 TPS2553\n~500 mA current limit\nFAULT#"];
+  shunt [label="0.1R + U4 INA180A2\ncurrent sense"];
+  vt [label="VTARGET"];
+  xlat [label="U5..U9 SN74LVC1T45\nCLK/D0/D1/D2/AUX\n3.3V <-> VTARGET"];
+  iso [label="U10 TMUX4827\nDATA0 HV isolation"];
+  conn [label="Universal 2x5 target\nVTGT GND CLK DATA0\nDATA1 DATA2 RESET/VPP AUX"];
+  boost [label="U3 TPS61040\n~11.8 V VPP"];
+  mclr [label="Q1/Q2 + JP1\nMCLR/VPP HV switch"];
+  updi [label="Q4/Q5 + JP2 + 1k\nUPDI DATA0 HV pulse"];
+  rst [label="Q3 2N7002\nopen-drain reset"];
+  adc [label="ADC\nVTARGET GP26\nVPP GP27\nCURRENT GP28"];
+
+  usb -> pico;
+  usb -> reg; reg -> sw; sw -> shunt; shunt -> vt; vt -> conn;
+  pico -> xlat [label="GPIO2..5,7 + DIR8..12"];
+  vt -> xlat [label="VCCB"];
+  xlat -> iso [label="DATA0"];
+  iso -> conn [label="DATA0"];
+  xlat -> conn [label="CLK/D1/D2/AUX"];
+  usb -> boost; boost -> mclr; mclr -> conn [label="RESET/VPP"];
+  boost -> updi; updi -> conn [label="DATA0 HV"];
+  pico -> iso [label="GP19 isolate"];
+  pico -> mclr [label="GP17"];
+  pico -> updi [label="GP20"];
+  pico -> boost [label="GP16"];
+  pico -> rst [label="GP6"];
+  rst -> conn [label="RESET sink"];
+  vt -> adc; boost -> adc; shunt -> adc; adc -> pico;
+}

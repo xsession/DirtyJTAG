@@ -1,0 +1,12 @@
+{
+  "device": "attiny817",
+  "family": "megaavr-0/tinyavr-1-updi",
+  "protocol": "updi",
+  "signature": [30, 147, 34],
+  "flash_size": 8192,
+  "page_size": 64,
+  "eeprom_size": 128,
+  "fuses": {"fuse0..fuse10": "nvm-controller"},
+  "implemented": {"updi_break": true, "updi_raw_8e2": true, "hv_activation": true, "nvm_read_write": "planned-cleanroom-layer"},
+  "notes": ["UPDI raw and HV activation exist. High-level NVM command sequencing remains a future backend layer."]
+}

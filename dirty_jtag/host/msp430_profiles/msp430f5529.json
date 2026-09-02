@@ -1,0 +1,16 @@
+{
+  "device": "msp430f5529",
+  "family": "msp430xv2-flash-usb",
+  "default_interface": "jtag",
+  "address_bits": 20,
+  "flash_start": 17408,
+  "flash_size": 131072,
+  "segment_size": 512,
+  "write_block": 2,
+  "ram_start": 9216,
+  "ram_size": 8192,
+  "info_start": 6144,
+  "info_size": 512,
+  "implemented": {"tap_raw": true, "txt_hex_plan": true, "erase_write": "guarded"},
+  "notes": ["MSP430Xv2 large-memory family; host planner preserves 20-bit addresses."]
+}

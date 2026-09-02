@@ -1,0 +1,16 @@
+{
+  "device": "msp430fr6989",
+  "family": "msp430xv2-fram-lcd",
+  "default_interface": "sbw",
+  "address_bits": 20,
+  "flash_start": 17408,
+  "flash_size": 131072,
+  "segment_size": 512,
+  "write_block": 2,
+  "ram_start": 7168,
+  "ram_size": 2048,
+  "info_start": 6144,
+  "info_size": 512,
+  "implemented": {"tap_raw": true, "txt_hex_plan": true, "fram_write": "guarded"},
+  "notes": ["Large FRAM MSP430Xv2 profile for planning and raw access bring-up."]
+}

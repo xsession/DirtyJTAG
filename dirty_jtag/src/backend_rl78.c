@@ -1,0 +1,6 @@
+/* SPDX-License-Identifier: MIT */
+#include "djprog/backend.h"
+#include "djprog/phy.h"
+#include "djprog/hw.h"
+#include <errno.h>
+static struct dj_target_cfg cfg;static int sel(const struct dj_target_cfg*c){cfg=*c;return 0;}static int enter(void){const struct dj_hw_ops*h=dj_hw();if(!h)return-ENODEV;h->dir(DJ_PIN_DATA0,DJ_DIR_OUTPUT);h->dir(DJ_PIN_RESET,DJ_DIR_OUTPUT);if(h->power){int r=h->power(cfg.power);if(r)return r;}h->write(DJ_PIN_DATA0,false);h->write(DJ_PIN_RESET,false);h->delay_us(1000);h->write(DJ_PIN_RESET,true);h->delay_us(1000);h->write(DJ_PIN_DATA0,true);uint8_t mode=0x3A;return dj_uart_1wire_txrx(&mode,1,0,0,9600,false);}static int leave(void){if(dj_hw()){dj_hw()->write(DJ_PIN_RESET,false);dj_hw()->dir(DJ_PIN_DATA0,DJ_DIR_INPUT);}return 0;}static int raw(const uint8_t*t,size_t n,uint8_t*r,size_t*rn){if(!t||n<4||!rn)return-EINVAL;uint16_t txc=(uint16_t)t[0]|((uint16_t)t[1]<<8),rxc=(uint16_t)t[2]|((uint16_t)t[3]<<8);if(4u+txc>n||rxc>*rn)return-EINVAL;int e=dj_uart_1wire_txrx(t+4,txc,r,rxc,cfg.clock_hz?cfg.clock_hz:115200,false);if(!e)*rn=rxc;return e;}const struct dj_backend dj_backend_rl78={DJ_PROTO_RENESAS_RL78,"renesas-rl78-protocol-a",DJ_CAP_RAW_XFER|DJ_CAP_EXPERIMENTAL,115200,1000000,sel,enter,leave,0,0,0,0,raw};

@@ -1,0 +1,12 @@
+{
+  "device": "atmega328p",
+  "family": "classic-avr",
+  "protocol": "avr-isp",
+  "signature": [30, 149, 15],
+  "flash_size": 32768,
+  "page_size": 128,
+  "eeprom_size": 1024,
+  "fuses": {"lfuse": true, "hfuse": true, "efuse": true, "lock": true},
+  "implemented": {"isp_enter": true, "signature": true, "chip_erase": true, "flash_read": true, "flash_write": true, "flash_verify": true, "fuse_read": true, "fuse_write": true, "eeprom_raw": "raw-instruction"},
+  "notes": ["Common Arduino Uno/Nano class part; <64 KiB flash so no extended-address byte is required."]
+}

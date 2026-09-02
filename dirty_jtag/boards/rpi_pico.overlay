@@ -1,0 +1,10 @@
+#include <zephyr/dt-bindings/adc/adc.h>
+
+&adc { status = "okay"; };
+
+&zephyr_udc0 {
+    dj_cdc: dj_cdc {
+        compatible = "zephyr,cdc-acm-uart";
+        label = "DirtyJTAG Universal Programmer";
+    };
+};

@@ -1,0 +1,33 @@
+{
+  "device": "atmega2560",
+  "family": "classic-avr-large-flash",
+  "protocol": "avr-isp",
+  "signature": [
+    30,
+    152,
+    1
+  ],
+  "flash_size": 262144,
+  "page_size": 256,
+  "eeprom_size": 4096,
+  "fuses": {
+    "lfuse": true,
+    "hfuse": true,
+    "efuse": true,
+    "lock": true
+  },
+  "implemented": {
+    "isp_enter": true,
+    "signature": true,
+    "chip_erase": true,
+    "flash_read": true,
+    "flash_write": true,
+    "flash_verify": true,
+    "fuse_read": true,
+    "fuse_write": true
+  },
+  "notes": [
+    "Rev K enables high-level ATmega2560 ISP flash read/write/verify using Load Extended Address Byte when crossing 64K-word flash windows."
+  ],
+  "requires_extended_address": true
+}

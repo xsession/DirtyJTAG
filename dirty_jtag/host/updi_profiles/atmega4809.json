@@ -1,0 +1,19 @@
+{
+  "device": "atmega4809",
+  "family": "megaavr-0",
+  "protocol": "updi",
+  "flash_size": 49152,
+  "page_size": 128,
+  "flash_base": 32768,
+  "eeprom_size": 256,
+  "nvm_version": "nvmctrl-v0/1-style",
+  "implemented": {
+    "raw_updi": true,
+    "hex_plan": true,
+    "nvm_key_sequence": "descriptor-only",
+    "flash_write": "guarded-experimental"
+  },
+  "notes": [
+    "Descriptor is for planning; bench validation required before enabling non-dry-run writes."
+  ]
+}
