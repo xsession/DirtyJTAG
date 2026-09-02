@@ -16,14 +16,12 @@ git clone https://github.com/dirtyjtag/dirtyjtag
 cd dirtyjtag
 ```
 
-Initialize the Zephyr workspace and build the default STM32F103 "blue pill"
-configuration:
+Initialize the Zephyr workspace and build the universal RP2040 firmware:
 
 ```
 west init -l .
 west update
-cd dirty_jtag
-make
+west build -p always -b rpi_pico/rp2040 dirty_jtag
 ```
 
 If `west init` reports that a parent directory is already initialized, do not
@@ -42,62 +40,36 @@ west workspace, such as `C:\GIT\.west`, commands run from `dirty_jtag/` still us
 that parent workspace. In that layout, run `west init` only once for the parent
 workspace and use `west update` afterward.
 
-Do not use `import: true` in DirtyJTAG's manifest when you want to reuse an
-existing Zephyr checkout. Importing Zephyr's manifest makes west manage Zephyr's
-module list here too, which can clone many projects under the parent workspace
-such as `modules/lib/picolibc` and `modules/debug/percepio`.
+The manifest imports the module set pinned by Zephyr. In an existing west
+workspace, make sure its manifest and module revisions are compatible with the
+Zephyr revision in this repository before building.
 
-West manifest `path` entries are workspace-relative paths, not shell-expanded
-environment variables. If `ZEPHYR_BASE` is
-`C:\GIT\WORK\Gabor\paper_dispenser\fw\zephyrproject\zephyr` and the west
-workspace root is `C:\GIT`, the matching manifest path is:
-
-```
-WORK/Gabor/paper_dispenser/fw/zephyrproject/zephyr
-```
-
-Zephyr 4.4 requires Python 3.12 or newer. If west is launched by an older Python
-environment, force the desired interpreter through the workspace config:
-
-```powershell
-west config build.cmake-args -- "-DPython3_EXECUTABLE=C:/GIT/WORK/Gabor/paper_dispenser/fw/python314/python.exe -DWEST_PYTHON=C:/GIT/WORK/Gabor/paper_dispenser/fw/python314/python.exe"
-```
-
-The Makefile also accepts `PYTHON` and defaults to that local Python 3.14
-interpreter, so `make` builds use the same interpreter path.
-
-The default `make` target builds `dirtyjtag_bluepill/stm32f103xb`, an in-tree
-Zephyr board definition for the common STM32F103C8 Bluepill-style pinout.
+The root `Makefile` is only a convenience wrapper. Its default target builds
+`rpi_pico/rp2040` from the canonical `dirty_jtag/` application.
 
 Once the build is completed, your freshly compiled firmware will be available in
-`dirty_jtag/build/zephyr/` as `zephyr.bin` and `zephyr.elf`.
+`build/zephyr/` as `zephyr.bin`, `zephyr.elf`, and `zephyr.uf2`.
 
-DirtyJTAG now uses Zephyr devicetree overlays for hardware independence. Build a
-different Zephyr-supported board by changing `BOARD`:
-
-```
-make BOARD=olimex_stm32_h103/stm32f103xb
-```
-
-Use Zephyr's board names exactly. For example, the Raspberry Pi Pico board is
-`rpi_pico`, not `rpico`:
+The original DirtyJTAG frontend remains available for STM32F103 probes. Select
+it with the provided Kconfig fragment:
 
 ```
-west build -b rpi_pico
+west build -p always -b dirtyjtag_bluepill/stm32f103xb dirty_jtag -- \
+  -DEXTRA_CONF_FILE=legacy.conf
 ```
 
-For `rpi_pico`, a successful build also creates a UF2 image:
+The same legacy configuration can be used with the supplied Olimex and minimum
+development-board overlays:
 
 ```
-dirty_jtag/build/zephyr/zephyr.uf2
+west build -p always -b olimex_stm32_h103/stm32f103xb dirty_jtag -- \
+  -DEXTRA_CONF_FILE=legacy.conf
 ```
 
-DirtyJTAG uses Zephyr's `USB_DEVICE_STACK_NEXT` API to avoid the deprecated
-legacy USB device stack. If `USB_DEVICE_DRIVER` or `USB_DEVICE_STACK`
-deprecation warnings return, check that `dirty_jtag/prj.conf` has not been
-changed back to `CONFIG_USB_DEVICE_STACK=y` and that `src/usb.c` is not using
-legacy calls such as `usb_enable()`, `usb_read()`, `usb_write()`, or
-`USBD_DEFINE_CFG_DATA()`.
+The DJP2 CDC frontend currently uses Zephyr's compatibility USB device stack.
+The original vendor-class frontend uses `USB_DEVICE_STACK_NEXT`; `legacy.conf`
+switches the stack together with the frontend so incompatible APIs are never
+linked into one image.
 
 Board-specific JTAG pins live in Zephyr board DTS files or overlays under
 `dirty_jtag/boards/`. To port DirtyJTAG to a new Zephyr board, define `tck-gpios`,

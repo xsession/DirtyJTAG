@@ -1,36 +1,39 @@
 # Architecture
 
-DirtyJTAG is organized as a Zephyr application with the protocol logic kept
-separate from hardware access.
+The repository contains one Zephyr application, rooted at `dirty_jtag/`.
+Firmware policy and protocol behavior stay independent of Zephyr drivers so the
+core can also be compiled and tested on a host.
 
-## Active Firmware Path
+## Universal firmware
 
-The active build is rooted at `dirty_jtag/CMakeLists.txt` and uses these layers:
+The RP2040 build selects `CONFIG_DIRTYJTAG_UNIVERSAL_FRONTEND` and is split into
+four layers:
 
- * `dirty_jtag/src/cmd.*`: DirtyJTAG USB command protocol.
- * `dirty_jtag/src/jtag.*`: JTAG signal operations using Zephyr GPIO APIs and devicetree
-   pin descriptions.
- * `dirty_jtag/src/usb.*`: vendor-specific bulk USB transport using Zephyr's USB device
-   stack.
- * `dirty_jtag/src/delay.*`: timing helpers using Zephyr kernel timing.
+1. `src/main.c` owns the Zephyr USB CDC event loop.
+2. `src/usb_proto.c` validates DJP2 frames and dispatches commands.
+3. `src/backends/` and the protocol modules implement target behavior against
+   the interfaces in `include/djprog/` and `include/djpk4/`.
+4. `src/rpi_pico_hal.c` is the Zephyr hardware adapter for the protected Pico
+   frontend. The board overlay enables the required USB and ADC devices.
 
-Board portability comes from Zephyr board definitions and overlays in `dirty_jtag/boards/`.
-The default `dirtyjtag_bluepill/stm32f103xb` board provides the JTAG pins
-through the `zephyr,user` node, while Zephyr provides clocks, startup, linker
-scripts, USB controller drivers, and GPIO drivers.
+The native suite binds mock `dj_hw_ops` to the same backend and command code.
+This keeps protocol behavior testable without copying it into host utilities or
+Zephyr-specific modules.
 
-## Vendored Legacy Source
+## Legacy frontend
 
-`unicore-mx/` is now vendored source, not a Git submodule. It is pinned to the
-old submodule commit:
+`CONFIG_DIRTYJTAG_LEGACY_FRONTEND` selects the original DirtyJTAG USB command,
+JTAG, delay, and USB modules. It is retained for STM32F103-based probes whose
+hardware does not provide the protected universal frontend. `legacy.conf`
+selects this mode explicitly.
 
-```
-c80139a036466c3eab4ab8eca48f26b3a92333c1
-```
+The two frontends are mutually exclusive Kconfig choices and are assembled by
+one `dirty_jtag/CMakeLists.txt`; there is no second application at repository
+root.
 
-DirtyJTAG no longer builds against this library. Keep it in-tree for historical
-reference, comparison while migrating board support, and extracting behavior
-that has not yet been represented with Zephyr APIs.
+## Portability
 
-New hardware support should be added with Zephyr board support or application
-overlays instead of adding new direct `unicore-mx` register dependencies.
+Board definitions and application overlays live under `dirty_jtag/boards/`.
+New hardware support should describe devices and pins through devicetree, use
+Zephyr driver APIs in a hardware adapter, and keep target algorithms behind the
+existing `dj_hw_ops` and backend contracts.

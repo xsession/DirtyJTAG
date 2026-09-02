@@ -1,10 +1,23 @@
+#include <zephyr/dt-bindings/adc/adc.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
 / {
-  zephyr,user {
-    tck-gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
-    tdo-gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
-    tdi-gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>;
-    tms-gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
-    trst-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
-    srst-gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>;
-  };
+	zephyr,user {
+		tck-gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+		tdo-gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
+		tdi-gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>;
+		tms-gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+		trst-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+		srst-gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&adc {
+	status = "okay";
+};
+
+&zephyr_udc0 {
+	dj_cdc: dj_cdc {
+		compatible = "zephyr,cdc-acm-uart";
+	};
 };

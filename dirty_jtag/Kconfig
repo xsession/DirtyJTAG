@@ -1,38 +1,60 @@
-menu "DirtyJTAG Universal Programmer + Debugger"
+mainmenu "DirtyJTAG firmware"
+
+choice DIRTYJTAG_FRONTEND
+	prompt "USB protocol frontend"
+	default DIRTYJTAG_UNIVERSAL_FRONTEND if SOC_RP2040
+	default DIRTYJTAG_LEGACY_FRONTEND
+
+config DIRTYJTAG_UNIVERSAL_FRONTEND
+	bool "Universal DJP2 programmer and debugger"
+	depends on SOC_RP2040
+	help
+	  Build the DJP2 command frontend and universal programming backends for
+	  the protected Raspberry Pi Pico hardware frontend.
+
+config DIRTYJTAG_LEGACY_FRONTEND
+	bool "Original DirtyJTAG protocol"
+	help
+	  Build the original DirtyJTAG USB protocol and JTAG engine. This remains
+	  the compatibility frontend for boards without the universal hardware.
+
+endchoice
+
+if DIRTYJTAG_UNIVERSAL_FRONTEND
+
 config DJPROG_MAX_PAYLOAD
-    int "Maximum DJP2 payload"
-    range 256 4096
-    default 2048
-    help
-      Largest request/response payload buffered by the USB command task.
+	int "Maximum DJP2 payload"
+	range 256 4096
+	default 2048
+	help
+	  Largest request or response payload buffered by the USB command task.
 
 config DJPROG_VPP_MIN_MV
-    int "Minimum accepted VPP"
-    default 10500
+	int "Minimum accepted VPP"
+	default 10500
 
 config DJPROG_VPP_MAX_MV
-    int "Maximum accepted VPP"
-    default 13250
-
+	int "Maximum accepted VPP"
+	default 13250
 
 config DJPROG_SWIM_RP2040_PIO
-    bool "Use RP2040 PIO-assisted STM8 SWIM PHY"
-    default y if SOC_RP2040
-    help
-      Bind an RP2040 PIO state machine as the preferred STM8 SWIM packet PHY
-      on Raspberry Pi Pico builds.  Rev E offloads timing-critical transmit
-      pulses to PIO while keeping the receive path conservative and bench-
-      calibratable.  Native tests continue to use the mock/GPIO PHY.
+	bool "Use RP2040 PIO-assisted STM8 SWIM PHY"
+	default y
+	help
+	  Use an RP2040 PIO state machine for timing-sensitive STM8 SWIM pulses.
 
 config DJPROG_SWIM_PIO_DEFAULT_HZ
-    int "Default STM8 SWIM PIO low-speed clock"
-    default 363000
-    range 100000 8000000
+	int "Default STM8 SWIM PIO low-speed clock"
+	range 100000 8000000
+	default 363000
 
 config DJPROG_TARGET_CURRENT_LIMIT_MA
-    int "Nominal hardware target current limit"
-    default 500
-    help
-      Documentation value for the fitted TPS2553 RILIM. The hardware limiter,
-      not firmware, enforces the actual current limit.
-endmenu
+	int "Nominal hardware target current limit"
+	default 500
+	help
+	  Documentation value for the fitted TPS2553 RILIM. Hardware enforces
+	  the actual current limit.
+
+endif
+
+source "Kconfig.zephyr"

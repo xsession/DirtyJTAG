@@ -17,6 +17,9 @@
 #define DJ_CAP_DEBUG_REGS    (1u<<9)
 #define DJ_CAP_DEBUG_BREAK   (1u<<10)
 #define DJ_CAP_DEBUG_OPENOCD (1u<<11)
+#define DJ_CAP_BRIDGE        (1u<<12)
+#define DJ_CAP_POWER_TRACE   (1u<<13)
+#define DJ_CAP_BOOTLOADER    (1u<<14)
 #define DJ_CAP_EXPERIMENTAL  (1u<<31)
 
 enum dj_proto_id {
@@ -36,6 +39,8 @@ enum dj_proto_id {
     DJ_PROTO_ARM_SWD=60,
     DJ_PROTO_JTAG=61,
     DJ_PROTO_TMS320_C2000_JTAG=70,
+    DJ_PROTO_TI_SIMPLELINK_SWD=80,
+    DJ_PROTO_TI_SIMPLELINK_CJTAG=81,
 };
 
 struct dj_target_cfg {

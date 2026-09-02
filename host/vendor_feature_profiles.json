@@ -1,0 +1,1131 @@
+[
+  {
+    "vendor": "SEGGER",
+    "product": "J-Link/J-Trace",
+    "category": "commercial-debug-probe",
+    "features": [
+      "RTT multi-channel terminal",
+      "SWO/ITM capture",
+      "flash breakpoints",
+      "SystemView event stream",
+      "script files"
+    ],
+    "takeaway": "Keep RTT/SWO/SystemView-like workflows as generic memory/trace services with source-compatible host tools, not J-Link protocol emulation.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 10,
+    "source_url": "https://kb.segger.com/UM08001_J-Link_/_J-Trace_User_Guide",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Lauterbach",
+    "product": "TRACE32",
+    "category": "high-end-trace-debug",
+    "features": [
+      "multicore debugging",
+      "hypervisor-aware debug",
+      "trace-based debugging",
+      "timing/code-coverage analysis",
+      "scriptable PowerView workflows"
+    ],
+    "takeaway": "Add session/target topology model, trace metadata, and timing export hooks instead of only raw JTAG bitbang.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 10,
+    "source_url": "https://www.lauterbach.com/features/multicore-debugging-and-tracing",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "iSYSTEM",
+    "product": "BlueBox/winIDEA Analyzer",
+    "category": "automotive-debug-trace",
+    "features": [
+      "program trace",
+      "data trace",
+      "profiler",
+      "coverage window",
+      "custom post-processing inspectors"
+    ],
+    "takeaway": "Represent captures as typed streams with CSV/JSON export and offline analyzer scripts.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 9,
+    "source_url": "https://www.isystem.com/downloads/winIDEA/help/analyzer-overview.html",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Arm",
+    "product": "CMSIS-DAP",
+    "category": "open-standard-debug",
+    "features": [
+      "standard SWD/JTAG commands",
+      "probe capability discovery",
+      "DAP info blocks",
+      "vendor-neutral tooling"
+    ],
+    "takeaway": "Add an optional CMSIS-DAP personality/bridge so pyOCD/OpenOCD can talk to DirtyJTAG directly.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 10,
+    "source_url": "https://arm-software.github.io/CMSIS-DAP/latest/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Arm Mbed",
+    "product": "DAPLink",
+    "category": "open-probe-firmware",
+    "features": [
+      "drag-and-drop flash",
+      "virtual COM port",
+      "CMSIS-DAP debug",
+      "board flash algorithms"
+    ],
+    "takeaway": "Implement mass-storage flashing and board-profile descriptors as a high-value UX layer.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 9,
+    "source_url": "https://github.com/ARMmbed/DAPLink/blob/main/docs/USERS-GUIDE.md",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "OpenOCD",
+    "product": "Open On-Chip Debugger",
+    "category": "open-debug-server",
+    "features": [
+      "remote bitbang",
+      "RTOS awareness",
+      "flash drivers",
+      "semihosting",
+      "GDB server"
+    ],
+    "takeaway": "Continue using OpenOCD for CPU semantics; add config generation and RTOS helper profiles.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 10,
+    "source_url": "https://openocd.org/doc-release/html/GDB-and-OpenOCD.html"
+  },
+  {
+    "vendor": "pyOCD",
+    "product": "pyOCD",
+    "category": "open-arm-tool",
+    "features": [
+      "debug sequences",
+      "RTT streaming",
+      "SWO/SWV",
+      "semihosting",
+      "flash programming"
+    ],
+    "takeaway": "Add CMSIS-Pack/PDSC debug-sequence importer and file-based RTT/SWV capture workflows.",
+    "dirtyjtag_status": "planned",
+    "priority": 9,
+    "source_url": "https://pyocd.io/"
+  },
+  {
+    "vendor": "Black Magic Debug",
+    "product": "Black Magic Probe/BMDA",
+    "category": "probe-embedded-gdb-server",
+    "features": [
+      "probe-side GDB server",
+      "SWD/JTAG scanning",
+      "no separate OpenOCD process",
+      "bmpflash utility"
+    ],
+    "takeaway": "Add optional lightweight GDB remote server mode for simple Cortex-M targets.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 8,
+    "source_url": "https://github.com/blackmagic-debug/blackmagic/wiki/Home",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Arm Keil",
+    "product": "ULINKplus/ULINKpro",
+    "category": "ide-debug-probe",
+    "features": [
+      "power measurement",
+      "SWO/trace",
+      "test automation",
+      "Event Recorder workflows"
+    ],
+    "takeaway": "Extend existing current sensing into timestamped power trace tied to run-control events.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 9,
+    "source_url": "https://www.keil.com/support/man/docs/ulinkplus/default.htm",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "IAR",
+    "product": "I-jet/I-jet Trace",
+    "category": "ide-debug-trace-probe",
+    "features": [
+      "power debugging",
+      "ETB/MTB/TMC trace",
+      "SWO trace",
+      "auto trace clock selection"
+    ],
+    "takeaway": "Add trace-clock calibration diagnostics and power-vs-PC export format.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 8,
+    "source_url": "https://docs.iar.com/probes/en/i-jet/introduction-to-i-jet/the-i-jet-in-circuit-debugging-probe.html",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "PEmicro",
+    "product": "Multilink Universal FX",
+    "category": "multi-architecture-probe",
+    "features": [
+      "JTAG/SWD/BDM/BDC/ONCE/DAP",
+      "power measurement",
+      "real-time variables",
+      "printf events",
+      "trace capture"
+    ],
+    "takeaway": "Add legacy protocol extension points and time-correlated variable polling.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 8,
+    "source_url": "https://www.pemicro.com/products/product_viewDetails.cfm?product_id=15320180",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "STMicroelectronics",
+    "product": "STLINK-V3SET/V3PWR",
+    "category": "vendor-debug-probe",
+    "features": [
+      "VCOM",
+      "SPI/I2C/CAN/GPIO bridge",
+      "SWD/JTAG",
+      "bootloader programming bridge",
+      "power profiling on V3PWR"
+    ],
+    "takeaway": "Promote DirtyJTAG bridge modes for UART/SPI/I2C/CAN/GPIO and add ST bootloader scripts.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 10,
+    "source_url": "https://www.st.com/en/development-tools/stlink-v3set.html",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Microchip",
+    "product": "MPLAB PICkit 5",
+    "category": "vendor-programmer-debugger",
+    "features": [
+      "VCOM",
+      "DFP-based device support",
+      "programmer-to-go",
+      "JTAG/SWD/ICSP/AVR protocols",
+      "configurable pull resistors"
+    ],
+    "takeaway": "Add offline job bundles, DFP profile ingestion, and configurable line-bias metadata.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 10,
+    "source_url": "https://www.microchip.com/en-us/development-tool/PG164150",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Microchip",
+    "product": "MPLAB Snap",
+    "category": "low-cost-vendor-debugger",
+    "features": [
+      "UPDI/PDI/SPI/debugWIRE/TPI",
+      "4-wire JTAG/SWD",
+      "streaming data gateway",
+      "software/hardware breakpoints"
+    ],
+    "takeaway": "Keep AVR protocols first-class and implement debugWIRE as guarded future backend.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 8,
+    "source_url": "https://onlinedocs.microchip.com/oxy/GUID-671CAF55-DB13-4D9A-8881-F58C984111B5-en-US-4/GUID-0018591C-3B2E-4B9D-84B7-F7790B421BBD.html",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Microchip",
+    "product": "Atmel-ICE/Power Debugger",
+    "category": "avr-arm-debugger",
+    "features": [
+      "debugWIRE",
+      "PDI",
+      "TPI",
+      "JTAG",
+      "SWD",
+      "run-time power data"
+    ],
+    "takeaway": "Use Power Debugger as model for power-data capture and AVR protocol completeness.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 9,
+    "source_url": "https://www.microchip.com/en-us/tools-resources/debug/programmers-debuggers",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Texas Instruments",
+    "product": "XDS110/XDS110v3",
+    "category": "vendor-debug-probe",
+    "features": [
+      "JTAG",
+      "cJTAG",
+      "SWD/SWO",
+      "EnergyTrace",
+      "multi-connector adapters"
+    ],
+    "takeaway": "Complete C2000 JTAG profile and add EnergyTrace-like low-rate current logging.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 10,
+    "source_url": "https://software-dl.ti.com/ccs/esd/documents/xdsdebugprobes/emu_xds110.html",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Renesas",
+    "product": "E2/E2 Lite",
+    "category": "vendor-debug-probe",
+    "features": [
+      "JTAG/SWD/serial debug",
+      "current measurement",
+      "external instrument synchronization",
+      "performance measurement",
+      "flash programmer integration"
+    ],
+    "takeaway": "Add external trigger I/O and current trace export for bench correlation.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 8,
+    "source_url": "https://www.renesas.com/en/software-tool/e2-emulator-rte0t00020kce00000r",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "NXP",
+    "product": "MCU-Link Pro",
+    "category": "cmsis-dap-probe",
+    "features": [
+      "CMSIS-DAP",
+      "SWO profiling",
+      "VCOM",
+      "energy measurement",
+      "analog monitor",
+      "USB-SPI/I2C bridge",
+      "peripheral emulation"
+    ],
+    "takeaway": "Add analog monitor channels and bridge protocol multiplexing.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 10,
+    "source_url": "https://www.nxp.com/design/design-center/development-boards-and-designs/MCU-LINK-PRO",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Infineon",
+    "product": "KitProg3/MiniProg4",
+    "category": "cmsis-dap-plus-bridges",
+    "features": [
+      "CMSIS-DAP Bulk/HID",
+      "USB-UART",
+      "USB-I2C",
+      "USB-SPI",
+      "GPIO bridge"
+    ],
+    "takeaway": "Implement selectable USB composite bridge endpoints and mode conflict diagnostics.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 9,
+    "source_url": "https://documentation.infineon.com/modustoolbox/docs/introduction-kitprog3",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Silicon Labs",
+    "product": "Simplicity Link Adapter/Commander",
+    "category": "vendor-debug-tools",
+    "features": [
+      "SWD/JTAG/C2",
+      "SWO",
+      "RTT/HSS",
+      "VUART",
+      "debug lock/unlock workflows"
+    ],
+    "takeaway": "Finish C2 high-level debug and add lock/unlock safe-script framework.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 9,
+    "source_url": "https://docs.silabs.com/simplicity-link-adapter/latest/simplicity-link-adapter-introduction/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Nordic Semiconductor",
+    "product": "nRF DK J-Link OB",
+    "category": "eval-board-debug-out",
+    "features": [
+      "J-Link OB",
+      "debug out header",
+      "external target programming",
+      "RTT ecosystem"
+    ],
+    "takeaway": "Add board-as-probe profile mapping and external target jumper checks.",
+    "dirtyjtag_status": "planned",
+    "priority": 7,
+    "source_url": "https://docs.nordicsemi.com/r/bundle/ug_nrf52840_dk/page/ug/dk/hw_debug_out_segger53.html"
+  },
+  {
+    "vendor": "Espressif",
+    "product": "ESP-Prog/ESP-Prog-2",
+    "category": "serial-jtag-probe",
+    "features": [
+      "auto firmware download",
+      "USB serial",
+      "JTAG debugging",
+      "boot/reset line automation"
+    ],
+    "takeaway": "Add serial bootloader line-control profiles for ESP/STM32/NXP/Renesas boot ROMs.",
+    "dirtyjtag_status": "planned",
+    "priority": 9,
+    "source_url": "https://documentation.espressif.com/espressif-esp-dev-kits/en/latest/other/esp-prog/user_guide.html"
+  },
+  {
+    "vendor": "Raspberry Pi",
+    "product": "Debug Probe",
+    "category": "low-cost-swd-uart-probe",
+    "features": [
+      "SWD",
+      "USB-UART",
+      "standard JST-SH debug connector",
+      "plug-and-play picoprobe style"
+    ],
+    "takeaway": "Add Raspberry Pi debug connector pinout and SWD+UART composite mode.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 8,
+    "source_url": "https://www.raspberrypi.com/documentation/microcontrollers/debug-probe.html",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Analog Devices",
+    "product": "CrossCore ICE",
+    "category": "vendor-debug-probe",
+    "features": [
+      "JTAG/SWD for ADI processors",
+      "CrossCore integration",
+      "target reset/control"
+    ],
+    "takeaway": "Keep connector/profile mechanism generic for non-Arm DSP families.",
+    "dirtyjtag_status": "research",
+    "priority": 5,
+    "source_url": "https://www.analog.com/en/resources/evaluation-hardware-and-software/evaluation-boards-kits/ice-1000.html"
+  },
+  {
+    "vendor": "Ashling",
+    "product": "Opella-XD/Vitra",
+    "category": "riscv-arc-debug-trace",
+    "features": [
+      "RISC-V debug",
+      "trace support",
+      "pre-silicon visibility",
+      "production troubleshooting"
+    ],
+    "takeaway": "Model RISC-V debug as a peer to ARM/OpenOCD and add RISC-V target templates.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 7,
+    "source_url": "https://ashling.com/support-riscv/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Green Hills",
+    "product": "MULTI",
+    "category": "ide-debug-trace",
+    "features": [
+      "RTOS-aware debug",
+      "trace integration",
+      "automotive workflow integration"
+    ],
+    "takeaway": "Export captures in IDE-neutral formats; avoid vendor IDE lock-in.",
+    "dirtyjtag_status": "research",
+    "priority": 5,
+    "source_url": "https://www.renesas.com/en/software-tool/e2-emulator-rte0t00020kce00000r",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Hitex",
+    "product": "PowerScale/Tantino",
+    "category": "debug-power-analysis",
+    "features": [
+      "power profiling",
+      "trace visualization",
+      "embedded test workflows"
+    ],
+    "takeaway": "Use as validation benchmark for low-power time-series UX.",
+    "dirtyjtag_status": "research",
+    "priority": 6,
+    "source_url": "https://www.hitex.com/tools-components/tools/debug-trace-tools",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "JTAG Technologies",
+    "product": "ProVision/JTAG Live",
+    "category": "boundary-scan-test",
+    "features": [
+      "boundary-scan test",
+      "in-system programming",
+      "board bring-up",
+      "IEEE 1149.1 focus"
+    ],
+    "takeaway": "Add BSDL import and boundary-scan chain discovery as a new non-CPU mode.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 9,
+    "source_url": "https://www.jtag.com/boundary-scan/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "XJTAG",
+    "product": "XJTAG Test Suite",
+    "category": "boundary-scan-test",
+    "features": [
+      "connection fault diagnosis",
+      "test coverage analysis",
+      "non-JTAG device library",
+      "XJFlash accelerated programming"
+    ],
+    "takeaway": "Add board-net test scripts and coverage reports from BSDL/netlist inputs.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 9,
+    "source_url": "https://www.xjtag.com/products/software/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Corelis",
+    "product": "ScanExpress",
+    "category": "boundary-scan-test",
+    "features": [
+      "test program generation",
+      "in-system programming",
+      "multi-TAP controllers",
+      "concurrent gang test/program"
+    ],
+    "takeaway": "Design future boundary-scan engine around chains, TAPs, UUTs and batch execution.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 8,
+    "source_url": "https://www.corelis.com/products/jtag-products/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "ASSET InterTech",
+    "product": "ScanWorks",
+    "category": "boundary-scan-validation",
+    "features": [
+      "board validation",
+      "JTAG infrastructure test",
+      "processor-controlled test",
+      "functional test integration"
+    ],
+    "takeaway": "Add board validation pipeline combining JTAG, scripts and external instruments.",
+    "dirtyjtag_status": "research",
+    "priority": 7,
+    "source_url": "https://www.asset-intertech.com/products/scanworks-platform-for-embedded-instruments/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "GOEPEL electronic",
+    "product": "SYSTEM CASCON/JTAG tools",
+    "category": "boundary-scan-test",
+    "features": [
+      "embedded instruments",
+      "boundary scan",
+      "production test integration",
+      "diagnostics"
+    ],
+    "takeaway": "Add diagnostic result model with failing-net/failing-pin reporting.",
+    "dirtyjtag_status": "research",
+    "priority": 7,
+    "source_url": "https://www.goepel.com/en/electronic-test/boundary-scan",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "DediProg",
+    "product": "SF/ISP programmers",
+    "category": "production-flash-programmer",
+    "features": [
+      "SPI NOR programming",
+      "standalone projects",
+      "gang programming",
+      "serial flash workflows"
+    ],
+    "takeaway": "Add external SPI flash programmer mode and offline project bundles.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 8,
+    "source_url": "https://www.dediprog.com/product?productCategoryNo=1",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Elnec",
+    "product": "BeeProg/JetProg gang programmers",
+    "category": "production-programmer",
+    "features": [
+      "universal device algorithms",
+      "serialization",
+      "production logs",
+      "gang programming"
+    ],
+    "takeaway": "Add production job manifest with serial numbers, CRC, operator log and verify policy.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 9,
+    "source_url": "https://www.elnec.com/en/products/universal-programmers/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Xeltek",
+    "product": "SuperPro programmers",
+    "category": "production-programmer",
+    "features": [
+      "large device library",
+      "standalone/gang programming",
+      "serialization",
+      "IC testing"
+    ],
+    "takeaway": "Maintain explicit device-support database with algorithm maturity and test coverage.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 7,
+    "source_url": "https://www.xeltek.com/universal-programmer/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Data I/O",
+    "product": "LumenX/production programming",
+    "category": "production-programmer",
+    "features": [
+      "secure provisioning",
+      "factory integration",
+      "traceability",
+      "programming centers"
+    ],
+    "takeaway": "Add signed job packages and audit logs for small production runs.",
+    "dirtyjtag_status": "research",
+    "priority": 7,
+    "source_url": "https://www.dataio.com/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "BPM Microsystems",
+    "product": "Automated programming systems",
+    "category": "production-programmer",
+    "features": [
+      "automated programming",
+      "factory integration",
+      "quality/traceability",
+      "Flash/MCU/logic support"
+    ],
+    "takeaway": "Add CSV/JSON production report and per-unit failure classification.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 8,
+    "source_url": "https://www.bpmmicro.com/company/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "SMH Technologies",
+    "product": "FlashRunner",
+    "category": "in-system-production-programmer",
+    "features": [
+      "in-system gang programming",
+      "production scripts",
+      "standalone execution",
+      "multi-target support"
+    ],
+    "takeaway": "Add multi-target scheduler over multiple DirtyJTAG probes.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 8,
+    "source_url": "https://www.smh-tech.com/products/flasher-programmer/flashrunner/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Olimex",
+    "product": "ARM-USB-OCD/ARM-USB-TINY",
+    "category": "openocd-ftdi-probe",
+    "features": [
+      "FTDI MPSSE",
+      "JTAG/SWD via OpenOCD",
+      "open hardware style",
+      "wide connector support"
+    ],
+    "takeaway": "Add FTDI-compatible MPSSE host bridge mode later if USB resources allow.",
+    "dirtyjtag_status": "research",
+    "priority": 5,
+    "source_url": "https://www.olimex.com/Products/ARM/JTAG/ARM-USB-OCD-H/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "FTDI",
+    "product": "MPSSE",
+    "category": "usb-bridge-chip",
+    "features": [
+      "JTAG/SPI/I2C bit protocols",
+      "USB FIFO",
+      "common OpenOCD adapter base"
+    ],
+    "takeaway": "Use MPSSE command compatibility as a possible host-side bridge profile.",
+    "dirtyjtag_status": "research",
+    "priority": 6,
+    "source_url": "https://ftdichip.com/software-examples/mpsse-projects/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "SecuringHardware",
+    "product": "Tigard",
+    "category": "multi-protocol-hardware-hacking",
+    "features": [
+      "JTAG",
+      "SWD",
+      "SPI",
+      "I2C",
+      "UART",
+      "voltage selection"
+    ],
+    "takeaway": "Expose DirtyJTAG's low-level script VM as a practical protocol-lab interface.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 7,
+    "source_url": "https://github.com/tigard-tools/tigard",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "1BitSquared",
+    "product": "Glasgow Interface Explorer",
+    "category": "programmable-digital-interface",
+    "features": [
+      "FPGA-based protocol applets",
+      "logic capture",
+      "scriptable interfaces",
+      "voltage-aware I/O"
+    ],
+    "takeaway": "Long-term: add RP2040 PIO applet model for reusable protocol engines.",
+    "dirtyjtag_status": "planned",
+    "priority": 9,
+    "source_url": "https://github.com/GlasgowEmbedded/glasgow"
+  },
+  {
+    "vendor": "Saleae",
+    "product": "Logic Pro/Logic 2",
+    "category": "logic-analyzer",
+    "features": [
+      "protocol decode",
+      "timing capture",
+      "automation API",
+      "analog+digital correlation"
+    ],
+    "takeaway": "Add Saleae-compatible export/trigger recipes for validating PIO timing.",
+    "dirtyjtag_status": "planned",
+    "priority": 8,
+    "source_url": "https://www.saleae.com/pages/features"
+  },
+  {
+    "vendor": "Pico Technology",
+    "product": "PicoScope",
+    "category": "oscilloscope-logic-analyzer",
+    "features": [
+      "mixed-signal capture",
+      "triggering",
+      "serial decoding",
+      "SDK automation"
+    ],
+    "takeaway": "Add external-instrument trigger pin and capture annotations.",
+    "dirtyjtag_status": "planned",
+    "priority": 6,
+    "source_url": "https://www.picotech.com/oscilloscope/serial-protocol-decoding"
+  },
+  {
+    "vendor": "Total Phase",
+    "product": "Aardvark/Beagle/Komodo",
+    "category": "protocol-analyzer-bridge",
+    "features": [
+      "I2C/SPI host adapter",
+      "USB analysis",
+      "CAN analysis",
+      "scriptable control"
+    ],
+    "takeaway": "Add bridge commands that can be mirrored to logic/protocol analyzers for board bring-up.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 7,
+    "source_url": "https://www.totalphase.com/products/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Great Scott Gadgets",
+    "product": "GreatFET/Facedancer",
+    "category": "usb-protocol-hacking",
+    "features": [
+      "USB emulation",
+      "GPIO/SPI/I2C/UART",
+      "host scripting",
+      "protocol exploration"
+    ],
+    "takeaway": "Consider USB-device emulation modes only after core probe features stabilize.",
+    "dirtyjtag_status": "research",
+    "priority": 5,
+    "source_url": "https://greatscottgadgets.com/greatfet/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Bus Pirate",
+    "product": "Bus Pirate 5",
+    "category": "interactive-serial-tool",
+    "features": [
+      "interactive SPI/I2C/UART/1-Wire",
+      "on-board macros",
+      "voltage/pullup control",
+      "scripting"
+    ],
+    "takeaway": "Add interactive REPL around the electrical script VM for manual board bring-up.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 8,
+    "source_url": "https://docs.buspirate.com/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "WCH",
+    "product": "WCH-LinkE",
+    "category": "riscv-arm-low-cost-probe",
+    "features": [
+      "RISC-V debug",
+      "ARM SWD",
+      "serial interface",
+      "low-cost USB probe"
+    ],
+    "takeaway": "Add WCH RISC-V target profiles and ch32v boot/debug scripts.",
+    "dirtyjtag_status": "planned",
+    "priority": 7,
+    "source_url": "https://www.wch-ic.com/products/WCH-Link.html"
+  },
+  {
+    "vendor": "Nuvoton",
+    "product": "Nu-Link",
+    "category": "vendor-debug-probe",
+    "features": [
+      "ICP programming",
+      "SWD debug",
+      "offline programming options",
+      "NuMicro device support"
+    ],
+    "takeaway": "Add NuMicro profiles and ICP-style bootloader scripts.",
+    "dirtyjtag_status": "research",
+    "priority": 6,
+    "source_url": "https://www.nuvoton.com/tool-and-software/debugger-and-programmer/"
+  },
+  {
+    "vendor": "GigaDevice",
+    "product": "GD-Link/GD32 tools",
+    "category": "vendor-debug-probe",
+    "features": [
+      "SWD/JTAG debug",
+      "GD32 programming",
+      "USB serial on some boards"
+    ],
+    "takeaway": "Add GD32 profile aliases for STM32-like SWD flows and option-byte handling.",
+    "dirtyjtag_status": "research",
+    "priority": 6,
+    "source_url": "https://www.gigadevice.com/developer/gd32-mcu/"
+  },
+  {
+    "vendor": "Puya",
+    "product": "PY32 tool ecosystem",
+    "category": "low-cost-arm-vendor",
+    "features": [
+      "SWD programming",
+      "small Cortex-M0+ devices",
+      "vendor flash tools"
+    ],
+    "takeaway": "Add PY32 flash/option profile group after OpenOCD/pyOCD support check.",
+    "dirtyjtag_status": "research",
+    "priority": 5,
+    "source_url": "https://www.puyasemi.com/"
+  },
+  {
+    "vendor": "Holtek",
+    "product": "e-Link/HT-IDE tools",
+    "category": "8-bit-mcu-programmer",
+    "features": [
+      "ICP/OCDS debug",
+      "low-cost MCU programming",
+      "device-specific algorithms"
+    ],
+    "takeaway": "Use script VM for initial ICP protocol experimentation.",
+    "dirtyjtag_status": "research",
+    "priority": 5,
+    "source_url": "https://www.holtek.com/"
+  },
+  {
+    "vendor": "Padauk",
+    "product": "PFS/PMS programming tools",
+    "category": "ultra-low-cost-8bit",
+    "features": [
+      "one-time/flash programming",
+      "small device algorithms",
+      "serial programming"
+    ],
+    "takeaway": "Candidate for niche algorithm descriptors and safe high-voltage gating.",
+    "dirtyjtag_status": "research",
+    "priority": 5,
+    "source_url": "https://www.padauk.com.tw/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Sonix",
+    "product": "SN8 tools",
+    "category": "8-bit-mcu-programmer",
+    "features": [
+      "OCD/ICE tooling",
+      "serial programming",
+      "device-specific adapters"
+    ],
+    "takeaway": "Add only after public programming specs are available.",
+    "dirtyjtag_status": "research",
+    "priority": 4,
+    "source_url": "https://www.sonix.com.tw/"
+  },
+  {
+    "vendor": "Realtek",
+    "product": "Ameba tools",
+    "category": "wireless-mcu-tooling",
+    "features": [
+      "UART download",
+      "SWD/JTAG on selected parts",
+      "Wi-Fi MCU provisioning"
+    ],
+    "takeaway": "Add serial boot/reset profiles for wireless MCUs.",
+    "dirtyjtag_status": "research",
+    "priority": 5,
+    "source_url": "https://www.amebaiot.com/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Bouffalo Lab",
+    "product": "BLDevCube/CKLink flows",
+    "category": "riscv-wireless-mcu",
+    "features": [
+      "UART flashing",
+      "JTAG/RISC-V debug",
+      "low-cost wireless MCU workflows"
+    ],
+    "takeaway": "Add Bouffalo serial boot and RISC-V debug profile research item.",
+    "dirtyjtag_status": "research",
+    "priority": 6,
+    "source_url": "https://dev.bouffalolab.com/home/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Ambiq",
+    "product": "Apollo debug/prog tools",
+    "category": "ultra-low-power-arm-mcu",
+    "features": [
+      "SWD programming",
+      "low-power validation",
+      "UART boot tools"
+    ],
+    "takeaway": "Useful benchmark for power-trace workflows and low-current measurement floor.",
+    "dirtyjtag_status": "research",
+    "priority": 6,
+    "source_url": "https://ambiq.com/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "SiFive",
+    "product": "Freedom Studio/Debug",
+    "category": "riscv-debug",
+    "features": [
+      "RISC-V debug module",
+      "OpenOCD integration",
+      "JTAG debug"
+    ],
+    "takeaway": "Add RISC-V OpenOCD config templates and IDCODE scan helper.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 7,
+    "source_url": "https://www.sifive.com/software",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Andes Technology",
+    "product": "AndeSight/ICE",
+    "category": "riscv-debug",
+    "features": [
+      "RISC-V debug",
+      "trace/profiling options",
+      "IDE integration"
+    ],
+    "takeaway": "RISC-V profiles need custom ISA/CSR metadata hooks.",
+    "dirtyjtag_status": "research",
+    "priority": 5,
+    "source_url": "https://www.andestech.com/en/products-solutions/andeshape-platforms/andesight-ide/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Nuclei",
+    "product": "Nuclei Studio/debugger",
+    "category": "riscv-debug",
+    "features": [
+      "RISC-V debug",
+      "OpenOCD fork/tooling",
+      "custom ISA awareness"
+    ],
+    "takeaway": "Add Nuclei profile group and OpenOCD config generator.",
+    "dirtyjtag_status": "research",
+    "priority": 6,
+    "source_url": "https://www.nucleisys.com/developboard.php"
+  },
+  {
+    "vendor": "XMOS",
+    "product": "xTAG",
+    "category": "vendor-jtag-debugger",
+    "features": [
+      "xCORE debug",
+      "JTAG",
+      "XTC tools integration",
+      "multi-tile debug"
+    ],
+    "takeaway": "Keep multi-core topology format generic enough for xCORE/RISC-V/C2000.",
+    "dirtyjtag_status": "research",
+    "priority": 5,
+    "source_url": "https://www.xmos.com/software-tools/"
+  },
+  {
+    "vendor": "Lattice Semiconductor",
+    "product": "HW-USBN-2B/Programmer",
+    "category": "fpga-jtag-programmer",
+    "features": [
+      "JTAG programming",
+      "SVF/JED flows",
+      "FPGA configuration"
+    ],
+    "takeaway": "Add SVF/XSVF player and FPGA-chain safety checks.",
+    "dirtyjtag_status": "planned",
+    "priority": 8,
+    "source_url": "https://www.latticesemi.com/programmer"
+  },
+  {
+    "vendor": "AMD/Xilinx",
+    "product": "Platform Cable/Digilent HS3",
+    "category": "fpga-jtag-programmer",
+    "features": [
+      "JTAG configuration",
+      "SVF/XSVF",
+      "high-speed FPGA debug",
+      "ILA workflows"
+    ],
+    "takeaway": "Add SVF player and Xilinx chain ID helper, avoid proprietary cable emulation.",
+    "dirtyjtag_status": "planned",
+    "priority": 8,
+    "source_url": "https://digilent.com/shop/jtag-hs3-programming-cable/"
+  },
+  {
+    "vendor": "Intel FPGA",
+    "product": "USB-Blaster II",
+    "category": "fpga-jtag-programmer",
+    "features": [
+      "JTAG programming",
+      "SignalTap workflows",
+      "Quartus integration"
+    ],
+    "takeaway": "Add generic JTAG/SVF features, not USB-Blaster clone mode.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 7,
+    "source_url": "https://www.intel.com/content/www/us/en/products/details/fpga/development-tools.html",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Efinix",
+    "product": "Titanium/Trion programmer",
+    "category": "fpga-jtag-programmer",
+    "features": [
+      "JTAG programming",
+      "SPI flash programming",
+      "FPGA chain operations"
+    ],
+    "takeaway": "Add FPGA profile descriptors for IDCODE/instruction length/flash path.",
+    "dirtyjtag_status": "research",
+    "priority": 5,
+    "source_url": "https://www.efinixinc.com/support/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Gowin Semiconductor",
+    "product": "Gowin Programmer",
+    "category": "fpga-jtag-programmer",
+    "features": [
+      "JTAG programming",
+      "external flash programming",
+      "FPGA device database"
+    ],
+    "takeaway": "Useful for user's Gowin boards; add Gowin IDCODE profiles and SVF path.",
+    "dirtyjtag_status": "planned",
+    "priority": 7,
+    "source_url": "https://www.gowinsemi.com/en/support/download_eda/"
+  },
+  {
+    "vendor": "QuickLogic",
+    "product": "QuickFeather/QORC tools",
+    "category": "fpga-riscv-tooling",
+    "features": [
+      "JTAG/SWD depending board",
+      "RISC-V firmware",
+      "FPGA fabric programming"
+    ],
+    "takeaway": "Add mixed MCU+FPGA profile model for hybrid devices.",
+    "dirtyjtag_status": "research",
+    "priority": 5,
+    "source_url": "https://www.quicklogic.com/products/software/"
+  },
+  {
+    "vendor": "Microchip FPGA",
+    "product": "FlashPro",
+    "category": "fpga-jtag-programmer",
+    "features": [
+      "JTAG programming",
+      "FPGA/SoC debug",
+      "production programming"
+    ],
+    "takeaway": "Add FPGA programming abstraction separate from MCU flash abstraction.",
+    "dirtyjtag_status": "research",
+    "priority": 6,
+    "source_url": "https://www.microchip.com/en-us/development-tool/flashpro",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Arduino",
+    "product": "CMSIS-DAP/debug probes on boards",
+    "category": "board-integrated-probe",
+    "features": [
+      "on-board debug",
+      "UF2/drag-drop on selected boards",
+      "serial monitor",
+      "bootloader reset automation"
+    ],
+    "takeaway": "Add Arduino board profile aliases and UF2 converter/drag-drop workflow.",
+    "dirtyjtag_status": "planned",
+    "priority": 6,
+    "source_url": "https://docs.arduino.cc/software/ide-v2/tutorials/ide-v2-debugger/"
+  },
+  {
+    "vendor": "Adafruit",
+    "product": "UF2 bootloader ecosystem",
+    "category": "user-friendly-flashing",
+    "features": [
+      "UF2 mass-storage flashing",
+      "board IDs",
+      "drag-and-drop recovery",
+      "bootloader double-reset patterns"
+    ],
+    "takeaway": "Add UF2 packaging and bootloader recovery scripts for supported targets.",
+    "dirtyjtag_status": "planned",
+    "priority": 8,
+    "source_url": "https://github.com/microsoft/uf2"
+  },
+  {
+    "vendor": "TinyUSB",
+    "product": "USB device stack ecosystem",
+    "category": "usb-composite-reference",
+    "features": [
+      "CDC/HID/MSC composite",
+      "WebUSB examples",
+      "DFU class",
+      "portable USB stack"
+    ],
+    "takeaway": "Use as conceptual benchmark for future composite modes; current Zephyr stack remains default.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 7,
+    "source_url": "https://docs.tinyusb.org/",
+    "rev_q_implementation": "covered by bridge commands, production-job descriptors, power-trace capture, or bootloader profiles as applicable"
+  },
+  {
+    "vendor": "Texas Instruments",
+    "product": "SimpleLink CC13xx/CC26xx LaunchPad/XDS110 workflow",
+    "category": "wireless-mcu-debug-programming",
+    "features": [
+      "SWD/cJTAG debug",
+      "XDS110 probe workflow",
+      "ROM UART/SPI bootloader",
+      "CCFG bootloader backdoor",
+      "RF debug pin routing"
+    ],
+    "takeaway": "Add SimpleLink-specific SWD/cJTAG profiles plus ROM bootloader planning and bridge-based UART/SPI entry workflows.",
+    "dirtyjtag_status": "implemented-partial",
+    "priority": 10,
+    "source_url": "https://software-dl.ti.com/simplelink/esd/simplelink_cc13xx_cc26xx_sdk/5.40.00.40/exports/docs/ti154stack/html/ti154stack-guide/debugging-index.html",
+    "rev_q_implementation": "backend_simplelink, simplelink_profiles, boot profiles, bridge commands"
+  }
+]
