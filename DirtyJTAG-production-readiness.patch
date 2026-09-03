@@ -1,0 +1,1115 @@
+diff --git a/.github/workflows/firmware-builds.yml b/.github/workflows/firmware-builds.yml
+index 9311e81..0b1f026 100644
+--- a/.github/workflows/firmware-builds.yml
++++ b/.github/workflows/firmware-builds.yml
+@@ -10,7 +10,10 @@ on:
+       - 'host/**'
+       - 'scripts/**'
+       - 'tests/**'
++      - 'docs/**'
++      - 'hardware/**'
+       - 'west.yml'
++      - 'Makefile'
+       - '.github/workflows/firmware-builds.yml'
+   pull_request:
+     paths:
+@@ -18,7 +21,10 @@ on:
+       - 'host/**'
+       - 'scripts/**'
+       - 'tests/**'
++      - 'docs/**'
++      - 'hardware/**'
+       - 'west.yml'
++      - 'Makefile'
+       - '.github/workflows/firmware-builds.yml'
+ 
+ jobs:
+@@ -33,10 +39,10 @@ jobs:
+         uses: actions/setup-python@v5
+         with:
+           python-version: '3.12'
+-      - name: Run native tests
+-        run: ./scripts/test-native.sh
+-      - name: Run Zephyr-facing syntax checks
+-        run: ./scripts/check-zephyr-syntax.sh
++      - name: Install host dependencies
++        run: python -m pip install -r host/requirements.txt
++      - name: Run release structure validation
++        run: ./scripts/validate-release.sh
+ 
+   zephyr:
+     runs-on: ubuntu-24.04
+@@ -52,8 +58,8 @@ jobs:
+       - name: Set up Zephyr workspace
+         uses: zephyrproject-rtos/action-zephyr-setup@v1
+         with:
+-          app-path: dirty_jtag
+-          toolchains: arm-zephyr-eabi
++          app-path: .
++          toolchains: arm-zephyr-eabi:xtensa-espressif_esp32_zephyr-elf
+       - name: Build Raspberry Pi Pico RP2040
+         run: west build dirty_jtag -p always -b rpi_pico/rp2040 -d build-rpi-pico
+       - name: Build DirtyJTAG Blue Pill
+@@ -62,3 +68,45 @@ jobs:
+         run: west build dirty_jtag -p always -b olimex_stm32_h103/stm32f103xb -d build-olimex-stm32h103 -- -DEXTRA_CONF_FILE=legacy.conf
+       - name: Build STM32 minimum dev board
+         run: west build dirty_jtag -p always -b stm32_min_dev/stm32f103xb -d build-stm32-min-dev -- -DEXTRA_CONF_FILE=legacy.conf
++      - name: Build NodeMCU ESP-32S
++        run: west build dirty_jtag -p always -b nodemcu_esp32s/esp32/procpu -d build-nodemcu-esp32s -- -DEXTRA_CONF_FILE=esp32s_nodemcu.conf
++      - name: Stage release-candidate artifacts
++        shell: bash
++        run: |
++          set -euo pipefail
++          stage_board() {
++            name="$1"
++            build="$2"
++            out="dist/$name"
++            mkdir -p "$out"
++            for f in zephyr.elf zephyr.bin zephyr.hex zephyr.uf2 zephyr.map; do
++              if [ -f "$build/zephyr/$f" ]; then
++                cp "$build/zephyr/$f" "$out/$f"
++              fi
++            done
++            test -f "$out/zephyr.elf"
++          }
++          stage_board rpi-pico build-rpi-pico
++          stage_board bluepill build-bluepill
++          stage_board olimex-stm32h103 build-olimex-stm32h103
++          stage_board stm32-min-dev build-stm32-min-dev
++          stage_board nodemcu-esp32s build-nodemcu-esp32s
++          west manifest --freeze > dist/WEST_MANIFEST_FREEZE.yml
++          python -m pip freeze > dist/PYTHON_PACKAGES.txt
++          {
++            echo "GIT_SHA=${GITHUB_SHA}"
++            echo "GIT_REF=${GITHUB_REF}"
++            echo "ZEPHYR_REVISION=$(awk '/revision:/ {print $2; exit}' west.yml)"
++            echo "DIRTYJTAG_VERSION=$(tr '\n' ';' < dirty_jtag/VERSION)"
++          } > dist/RELEASE_METADATA.txt
++          (
++            cd dist
++            find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
++          )
++      - name: Upload firmware release-candidate artifacts
++        uses: actions/upload-artifact@v4
++        with:
++          name: dirtyjtag-firmware-${{ github.sha }}
++          path: dist/
++          if-no-files-found: error
++          retention-days: 30
+diff --git a/dirty_jtag/Kconfig b/dirty_jtag/Kconfig
+index 316215d..f03ed51 100644
+--- a/dirty_jtag/Kconfig
++++ b/dirty_jtag/Kconfig
+@@ -62,12 +62,70 @@ config DJPROG_MAX_PAYLOAD
+ 
+ config DJPROG_VPP_MIN_MV
+ 	int "Minimum accepted VPP"
++	range 8000 15000
+ 	default 10500
+ 
+ config DJPROG_VPP_MAX_MV
+ 	int "Maximum accepted VPP"
++	range 9000 16000
+ 	default 13250
+ 
++config DJPROG_3V3_MIN_MV
++	int "Minimum accepted internally-generated 3.3 V target rail"
++	range 2500 3400
++	default 3000
++
++config DJPROG_3V3_MAX_MV
++	int "Maximum accepted internally-generated 3.3 V target rail"
++	range 3300 4200
++	default 3650
++
++config DJPROG_5V_MIN_MV
++	int "Minimum accepted internally-generated 5 V target rail"
++	range 4000 5000
++	default 4500
++
++config DJPROG_5V_MAX_MV
++	int "Maximum accepted internally-generated 5 V target rail"
++	range 5000 6000
++	default 5300
++
++config DJPROG_VTARGET_SCALE_PPM
++	int "VTARGET measurement gain calibration in ppm"
++	range 800000 1200000
++	default 1000000
++	help
++	  Gain correction applied after the nominal x2 divider conversion.
++
++config DJPROG_VTARGET_OFFSET_MV
++	int "VTARGET measurement offset calibration in mV"
++	range -500 500
++	default 0
++
++config DJPROG_VPP_SCALE_PPM
++	int "VPP measurement gain calibration in ppm"
++	range 800000 1200000
++	default 1000000
++	help
++	  Gain correction applied after the nominal x4.3 divider conversion.
++
++config DJPROG_VPP_OFFSET_MV
++	int "VPP measurement offset calibration in mV"
++	range -1000 1000
++	default 0
++
++config DJPROG_ITARGET_SCALE_PPM
++	int "Target-current measurement gain calibration in ppm"
++	range 800000 1200000
++	default 1000000
++	help
++	  Gain correction applied after the nominal 5 mV/mA conversion.
++
++config DJPROG_ITARGET_OFFSET_MA
++	int "Target-current measurement offset calibration in mA"
++	range -100 100
++	default 0
++
+ config DJPROG_SWIM_RP2040_PIO
+ 	bool "Use RP2040 PIO-assisted STM8 SWIM PHY"
+ 	default y
+diff --git a/dirty_jtag/VERSION b/dirty_jtag/VERSION
+index b59a248..f089364 100644
+--- a/dirty_jtag/VERSION
++++ b/dirty_jtag/VERSION
+@@ -1,5 +1,5 @@
+ VERSION_MAJOR = 2
+ VERSION_MINOR = 0
+ PATCHLEVEL = 0
+-VERSION_TWEAK = 18
+-EXTRAVERSION = rev-r
++VERSION_TWEAK = 19
++EXTRAVERSION = rc1
+diff --git a/docs/ADC_CALIBRATION.md b/docs/ADC_CALIBRATION.md
+new file mode 100644
+index 0000000..73f8868
+--- /dev/null
++++ b/docs/ADC_CALIBRATION.md
+@@ -0,0 +1,110 @@
++# RP2040 Universal Front-End ADC Calibration
++
++## 1. Purpose
++
++The universal RP2040 frontend uses ADC measurements as operator information and as part of safety decisions such as target-power verification and VPP range checking. Nominal divider and amplifier ratios are not sufficient for production safety without calibration/verification.
++
++Measurements:
++
++- ADC0: VTARGET, nominal x2 divider reconstruction.
++- ADC1: VPP, nominal x4.3 divider reconstruction.
++- ADC2: target current, nominal 5 mV/mA from 0.1 ohm shunt and INA180A2 gain.
++
++## 2. Firmware calibration parameters
++
++This production update adds build-time calibration coefficients:
++
++```text
++CONFIG_DJPROG_VTARGET_SCALE_PPM
++CONFIG_DJPROG_VTARGET_OFFSET_MV
++CONFIG_DJPROG_VPP_SCALE_PPM
++CONFIG_DJPROG_VPP_OFFSET_MV
++CONFIG_DJPROG_ITARGET_SCALE_PPM
++CONFIG_DJPROG_ITARGET_OFFSET_MA
++```
++
++`1000000` ppm means unity gain correction.
++
++The firmware applies:
++
++```text
++corrected = nominal * scale_ppm / 1,000,000 + offset
++```
++
++Safety thresholds are also Kconfig-controlled:
++
++```text
++CONFIG_DJPROG_VPP_MIN_MV
++CONFIG_DJPROG_VPP_MAX_MV
++CONFIG_DJPROG_3V3_MIN_MV
++CONFIG_DJPROG_3V3_MAX_MV
++CONFIG_DJPROG_5V_MIN_MV
++CONFIG_DJPROG_5V_MAX_MV
++```
++
++## 3. Equipment
++
++Recommended minimum:
++
++- calibrated 4.5-digit or better DMM;
++- programmable bench supply;
++- electronic load or precision resistor set for current calibration;
++- oscilloscope for VPP transient verification;
++- known-good USB host and production firmware image.
++
++## 4. VTARGET calibration
++
++1. Keep VPP disabled.
++2. Apply an external 3.300 V target rail measured by DMM.
++3. Record DirtyJTAG `measure` result.
++4. Repeat near the lower and upper intended operating points, for example 1.8 V, 3.3 V and 5.0 V where hardware permits.
++5. Determine best-fit scale and offset.
++6. Rebuild with the selected Kconfig values.
++7. Repeat measurements and verify error against the product requirement.
++
++Example single-point gain estimate when offset is negligible:
++
++```text
++scale_ppm = reference_mV * 1,000,000 / reported_mV
++```
++
++## 5. VPP calibration
++
++1. Disconnect the target.
++2. Enable the VPP boost only; do not apply it to a target connector during initial calibration.
++3. Measure the VPP rail with the DMM.
++4. Read DirtyJTAG VPP measurement.
++5. Calculate gain/offset correction.
++6. Verify corrected reading across the expected VPP operating window.
++7. Check transient overshoot with an oscilloscope.
++8. Verify firmware refuses VPP below/above configured safety limits.
++
++Do not widen VPP safety limits merely to compensate for a measurement error. Fix/calibrate the measurement path first.
++
++## 6. Target-current calibration
++
++1. Use an external target supply or approved internal supply configuration.
++2. Apply several known loads spanning the intended current range, for example 0, 10, 50, 100, 250 and 400 mA if the hardware/current limiter permits.
++3. Measure actual current with a calibrated instrument.
++4. Record DirtyJTAG current readings.
++5. Fit scale and offset.
++6. Rebuild and repeat.
++7. Confirm the hardware current limiter independently; ADC calibration is not a substitute for the limiter.
++
++## 7. Acceptance criteria
++
++Define project-specific limits before production. A reasonable engineering starting point is tighter than the firmware power-valid windows so measurement uncertainty cannot consume the whole safety margin.
++
++Record:
++
++- board serial/revision;
++- firmware commit and SHA-256;
++- calibration equipment IDs/calibration dates;
++- raw measurements;
++- fitted coefficients;
++- final verification results;
++- reviewer/date.
++
++## 8. Calibration strategy
++
++Build-time Kconfig calibration is appropriate for prototype and hardware-revision calibration. If production units show significant unit-to-unit spread, add nonvolatile per-unit calibration storage and a locked calibration command instead of producing a unique firmware build per unit.
+diff --git a/docs/OPERATOR_GUIDE.md b/docs/OPERATOR_GUIDE.md
+new file mode 100644
+index 0000000..4c093c7
+--- /dev/null
++++ b/docs/OPERATOR_GUIDE.md
+@@ -0,0 +1,149 @@
++# DirtyJTAG Operator Guide
++
++This guide is for normal bench and controlled production use of the RP2040 universal frontend.
++
++## 1. Before connecting a target
++
++1. Confirm the target MCU and programming/debug interface.
++2. Confirm target I/O voltage from the target schematic or datasheet.
++3. Confirm whether the target is externally powered or should be powered by DirtyJTAG.
++4. Remove/disable VPP authorization jumpers unless the selected protocol explicitly requires high voltage.
++5. Inspect the target connector orientation and ground connection.
++6. Start with DirtyJTAG in safe state.
++
++Never use the universal front end on patient-connected medical equipment without approved isolation and system-level safety controls.
++
++## 2. Host setup
++
++```sh
++python -m pip install -r host/requirements.txt
++python host/djprog.py --port COM8 hello
++python host/djprog.py --port COM8 status
++python host/djprog.py --port COM8 measure
++```
++
++Replace `COM8` with the actual CDC ACM device.
++
++## 3. Mandatory startup sequence
++
++```sh
++python host/djprog.py --port COM8 safe
++python host/djprog.py --port COM8 measure
++```
++
++Expected initial condition:
++
++- no VPP applied;
++- target supply off or explicitly external;
++- no target-power fault;
++- signal pins not actively driving unless a selected protocol has entered a session.
++
++## 4. Target power
++
++Prefer external target power during initial bring-up.
++
++Example internally powered 3.3 V target:
++
++```sh
++python host/djprog.py --port COM8 --safety-confirm power 3v3
++python host/djprog.py --port COM8 measure
++```
++
++Check measured voltage before continuing.
++
++For 5 V operation, confirm the selected MCU/interface is 5 V compatible. Several modern SWD/JTAG/SimpleLink interfaces are not.
++
++## 5. Selecting a protocol
++
++Examples:
++
++```sh
++python host/djprog.py --port COM8 config swd --power external --clock 1000000
++python host/djprog.py --port COM8 avr-config atmega328p --power 5v --clock 125000
++python host/djprog.py --port COM8 simplelink-config cc2652r --interface swd --power external
++```
++
++Always re-check `status` after configuration.
++
++## 6. Destructive operations
++
++Erase, write/program, target-power switching, VPP, bridge stimulation and script execution require explicit safety confirmation.
++
++Example:
++
++```sh
++python host/djprog.py --port COM8 --safety-confirm program-avr-hex firmware.hex \
++  --profile atmega328p --erase --verify
++```
++
++Never bypass verify in production unless the approved process documents why verification is impossible or intentionally omitted.
++
++## 7. High-voltage programming
++
++High voltage is a controlled engineering function.
++
++Before VPP:
++
++1. confirm exact target family;
++2. confirm VPP requirement and allowed range;
++3. install the correct physical authorization jumper;
++4. confirm measured VPP with no target connected during first hardware setup;
++5. keep unrelated signal drivers released.
++
++Manual VPP commands are for bench diagnosis, not routine production jobs.
++
++## 8. Debugging
++
++For ARM SWD/JTAG use the OpenOCD bridge unless a native backend is explicitly documented.
++
++Terminal 1:
++
++```sh
++python host/openocd_bridge.py --port COM8 --transport swd --power external
++```
++
++Terminal 2:
++
++```sh
++openocd -f host/openocd/dirtyjtag-remote-swd.cfg -f target/<target>.cfg
++```
++
++Use the exact OpenOCD target configuration for the MCU.
++
++## 9. RTT, SWO and trace
++
++Use RTT only after the target memory range/control block is known. For OpenOCD-owned SWD/JTAG sessions, prefer OpenOCD's target-memory-aware RTT support.
++
++SWO support must be treated according to `docs/VALIDATION_MATRIX.md`; do not assume high-speed capture is production-qualified without timing evidence.
++
++## 10. Bridge mode
++
++SPI/I2C/UART/GPIO bridge commands electrically stimulate the target and are therefore privileged operations. Confirm voltage, pin assignment and bus ownership before use.
++
++Do not connect the bridge to a bus simultaneously driven by incompatible external masters.
++
++## 11. Shutdown
++
++At the end of every session:
++
++```sh
++python host/djprog.py --port COM8 safe
++python host/djprog.py --port COM8 measure
++```
++
++Then remove DirtyJTAG-provided target power and disconnect the target.
++
++## 12. Stop conditions
++
++Stop immediately if any of the following occurs:
++
++- unexpected target voltage;
++- target-power fault indication;
++- excessive current;
++- VPP outside its approved window;
++- target becomes hot;
++- USB disconnect/reconnect during a destructive operation;
++- device identification differs from the approved production job;
++- verify failure.
++
++Return to safe state and investigate before retrying.
+diff --git a/docs/PRODUCTION_DOCUMENTATION_INDEX.md b/docs/PRODUCTION_DOCUMENTATION_INDEX.md
+new file mode 100644
+index 0000000..3a5cc5d
+--- /dev/null
++++ b/docs/PRODUCTION_DOCUMENTATION_INDEX.md
+@@ -0,0 +1,16 @@
++# Production Documentation Index
++
++Start here for production-oriented use:
++
++- `PRODUCTION_READY_DOCUMENTATION.md` — architecture, qualification rules, production blockers.
++- `OPERATOR_GUIDE.md` — safe bench/production operator procedure.
++- `RELEASE_PROCESS.md` — release candidate and production release workflow.
++- `VALIDATION_MATRIX.md` — authoritative qualification status and required evidence.
++- `ADC_CALIBRATION.md` — RP2040 measurement calibration and acceptance procedure.
++- `SAFETY_MEDICAL_GRADE_REVIEW.md` — hazard/safety review and medical-use boundary.
++- `SUPPORT_MATRIX.md` — feature implementation/support overview.
++- `USB_PROTOCOL.md` — DJP2 protocol definition.
++- `DEBUGGING.md` — debug architecture and host integration.
++- `CLEANROOM.md` — clean-room implementation boundary.
++
++Production claims must follow `VALIDATION_MATRIX.md`, not README marketing text or source-code presence alone.
+diff --git a/docs/PRODUCTION_READY_DOCUMENTATION.md b/docs/PRODUCTION_READY_DOCUMENTATION.md
+new file mode 100644
+index 0000000..d3ad7a9
+--- /dev/null
++++ b/docs/PRODUCTION_READY_DOCUMENTATION.md
+@@ -0,0 +1,245 @@
++# DirtyJTAG Production Readiness Manual
++
++**Status:** production-candidate engineering baseline, not a certified product release  
++**Reviewed branch:** `feature/refactor_to_zephyr_based`  
++**Reviewed head before this update:** `17f1036accd8e32129545882e5996c796aee7127` (`Add esp32 support`)  
++**Primary production target:** Raspberry Pi Pico / RP2040 universal DJP2 frontend  
++**Compatibility targets:** STM32 legacy DirtyJTAG frontend and NodeMCU ESP-32S legacy UART frontend
++
++## 1. Purpose
++
++This document defines the minimum engineering, build, verification, hardware, operator and release controls required before a DirtyJTAG firmware image is treated as a production release.
++
++The repository contains a broad set of programmer/debugger transports and experimental family backends. A protocol being present in source code is not equivalent to production qualification. Production qualification is granted only by recorded evidence in `docs/VALIDATION_MATRIX.md` and the release checklist in `docs/RELEASE_PROCESS.md`.
++
++## 2. Product architecture
++
++DirtyJTAG currently has two firmware frontends.
++
++### 2.1 Universal DJP2 frontend
++
++The universal frontend is selected with `CONFIG_DIRTYJTAG_UNIVERSAL_FRONTEND=y` and is currently restricted to RP2040. It provides the protected target-power/VPP hardware abstraction, DJP2 USB protocol, programming/debug backends, bridge functions, safety arming, RTT/SWO support and measurement functions.
++
++Production build target:
++
++```sh
++west build dirty_jtag -p always -b rpi_pico/rp2040 -d build-rpi-pico
++```
++
++### 2.2 Legacy DirtyJTAG frontend
++
++The compatibility frontend uses the original DirtyJTAG command model. It supports native USB on supported STM32 boards and UART packet transport on NodeMCU ESP-32S.
++
++Representative builds:
++
++```sh
++west build dirty_jtag -p always -b dirtyjtag_bluepill/stm32f103xb \
++  -d build-bluepill -- -DEXTRA_CONF_FILE=legacy.conf
++
++west build dirty_jtag -p always -b nodemcu_esp32s/esp32/procpu \
++  -d build-nodemcu-esp32s -- -DEXTRA_CONF_FILE=esp32s_nodemcu.conf
++```
++
++## 3. Production status model
++
++Every feature is classified as one of the following:
++
++| State | Meaning |
++|---|---|
++| `qualified` | Bench-tested on named hardware with recorded evidence and release criteria passed. |
++| `validated-lab` | Functional on real hardware but not yet qualified across voltage/timing/error limits. |
++| `ci-only` | Builds/tests pass in CI or mock tests; no recorded hardware qualification. |
++| `experimental` | Intended for engineering use only; destructive use requires explicit operator acknowledgement. |
++| `unsupported` | Transport or descriptor exists but required high-level behavior is incomplete. |
++
++Only `qualified` items may be advertised as production-supported.
++
++## 4. Required release evidence
++
++A production release SHALL have all of the following:
++
++1. Native host/unit test suite passes with warnings treated as errors where applicable.
++2. Zephyr builds pass for every advertised firmware target.
++3. Firmware artifacts are produced by CI from the tagged commit.
++4. SHA-256 hashes are generated for all release artifacts.
++5. `docs/VALIDATION_MATRIX.md` is updated with exact board, MCU, target voltage, protocol, firmware revision and observed result.
++6. ADC calibration is completed for each production hardware revision or production calibration policy is documented.
++7. VPP and target-power interlocks are bench-verified.
++8. Destructive-programming workflows include readback/verify unless the target protocol makes verify impossible and the exception is documented.
++9. Safety arming behavior is tested after reset, USB reconnect and protocol change.
++10. Known limitations and unsupported combinations are reviewed before release.
++
++## 5. Safety controls
++
++The authoritative safety analysis is `docs/SAFETY_MEDICAL_GRADE_REVIEW.md`.
++
++Production operation requires the following controls:
++
++- power and VPP disabled at startup;
++- translator directions in non-driving state at startup;
++- explicit safety arm for destructive operations;
++- hardware VPP authorization jumpers where required;
++- VPP voltage measurement before high-voltage application;
++- target-power fault/current monitoring;
++- safe-idle execution after errors, aborts and normal shutdown;
++- no 5 V selection on target families whose electrical interface is limited to lower voltages;
++- no connection to patient-connected medical equipment without system-level isolation and formal safety assessment.
++
++## 6. Electrical production requirements
++
++The Rev B front end documentation is the current electrical design baseline. Before production fabrication:
++
++1. Convert the conceptual/source-of-truth connectivity into a maintained KiCad project.
++2. Run ERC and DRC on the exact release schematic/PCB.
++3. Verify all translator, analog switch, ADC-divider and MOSFET absolute maximum ratings.
++4. Verify the target-current limiter worst-case tolerance.
++5. Verify the 12 V VPP rail under no-load and expected-load conditions.
++6. Verify DATA0 high-voltage isolation prevents 12 V from reaching the normal level translator.
++7. Confirm creepage/clearance and isolation requirements for the intended product environment.
++8. Record PCB revision in every hardware validation entry.
++
++The legacy `.sch` file is not approved as production fabrication source unless it is explicitly reviewed and promoted.
++
++## 7. Measurement subsystem
++
++RP2040 measurements currently cover:
++
++- VTARGET through ADC0;
++- VPP through ADC1;
++- target current through ADC2;
++- target-power fault through a dedicated GPIO.
++
++The firmware uses nominal divider/amplifier ratios plus Kconfig calibration coefficients. Production boards must follow `docs/ADC_CALIBRATION.md`.
++
++A production configuration must not rely only on nominal resistor tolerances when voltage measurements are used as safety interlocks.
++
++## 8. Host software
++
++Install host dependencies with:
++
++```sh
++python -m pip install -r host/requirements.txt
++```
++
++The runtime dependency is intentionally small: `pyserial` plus the Python standard library.
++
++Production hosts should record:
++
++- host OS;
++- Python version;
++- DirtyJTAG host-tool commit;
++- firmware SHA-256;
++- target profile/descriptor revision;
++- operation log and verify result.
++
++## 9. Programming and debug policy
++
++### 9.1 Programming
++
++Before programming a production target:
++
++1. identify/confirm the exact device;
++2. confirm target voltage;
++3. confirm image address ranges;
++4. preserve configuration/calibration areas unless the approved job explicitly changes them;
++5. erase only when required;
++6. program;
++7. verify readback;
++8. save a result record.
++
++### 9.2 Debug
++
++Debug support is divided between native family engines and OpenOCD-based transport. A raw SWD/JTAG transport must not be described as a complete target debugger unless the host stack provides CPU-level run control.
++
++### 9.3 Experimental backends
++
++Features marked experimental must not be used in automated production until a validation record promotes them.
++
++## 10. Production jobs
++
++Production-job descriptors should be immutable inputs to a release process. Each approved job should include:
++
++- target family and exact device;
++- interface and target voltage;
++- firmware image and SHA-256;
++- erase policy;
++- verify policy;
++- protected regions;
++- serialization/calibration behavior, if applicable;
++- expected device identification;
++- operator confirmation requirements;
++- output report path/format.
++
++A production job must begin and end in a safe electrical state.
++
++## 11. CI and release artifacts
++
++CI SHALL build all advertised board targets and upload checksummed binaries. The release artifact set should contain, where generated:
++
++- `zephyr.elf`;
++- `zephyr.bin`;
++- `zephyr.hex`;
++- `zephyr.uf2` for RP2040;
++- `zephyr.map` for engineering traceability;
++- `SHA256SUMS`;
++- release metadata with source commit and Zephyr version.
++
++CI artifacts are candidates. A human-controlled release process decides whether those artifacts are promoted to an official release.
++
++## 12. Configuration management
++
++Release tags should use semantic versions and correspond to `dirty_jtag/VERSION`.
++
++Recommended flow:
++
++```text
++feature branch
++   -> reviewed pull request
++   -> CI green
++   -> validation matrix updated
++   -> version updated
++   -> release candidate tag
++   -> hardware smoke test
++   -> production tag/release
++```
++
++Do not release from an unreviewed working tree.
++
++## 13. Cybersecurity and supply-chain controls
++
++For production use:
++
++- pin the Zephyr revision in `west.yml`;
++- review dependency changes before updating the manifest;
++- use GitHub branch protection and required CI checks;
++- generate checksums for released binaries;
++- retain source commit identifiers in release records;
++- do not accept unsigned/untrusted programming profiles for automated production;
++- treat script VM and bridge commands as privileged target-stimulation interfaces;
++- review third-party licenses when importing algorithms or descriptors.
++
++## 14. Current release blockers
++
++The codebase should remain a production candidate until the following are closed:
++
++- real-hardware validation evidence is incomplete for several MCU families;
++- the universal front-end still needs a production KiCad PCB source and fabrication review;
++- SWIM PIO RX and SWO capture need bench timing evidence before high-speed production claims;
++- some dsPIC debug functionality depends on user-provided vendor pack/debug-executive assets;
++- several niche backends are transport-level or experimental rather than fully qualified;
++- release branch protection/signing policy is not enforced by repository configuration visible in source;
++- per-unit or per-revision ADC calibration records must be established for hardware shipped as a product.
++
++## 15. Release acceptance
++
++A release may be called **production-qualified** only when:
++
++- all release-blocking tests are green;
++- intended production protocols are marked `qualified` in the validation matrix;
++- hardware revision is frozen and reviewed;
++- calibration and electrical-safety tests pass;
++- release artifacts and checksums are archived;
++- release notes identify all experimental/unsupported features;
++- an accountable reviewer approves the release record.
++
++Until then, use the term **production candidate** or **engineering release**.
+diff --git a/docs/RELEASE_PROCESS.md b/docs/RELEASE_PROCESS.md
+new file mode 100644
+index 0000000..c211972
+--- /dev/null
++++ b/docs/RELEASE_PROCESS.md
+@@ -0,0 +1,122 @@
++# DirtyJTAG Release Process
++
++## 1. Release types
++
++- **Engineering:** development snapshot; may include experimental features.
++- **Release candidate:** feature-frozen candidate intended for final hardware validation.
++- **Production:** approved build with validation evidence and archived checksums.
++
++## 2. Preconditions
++
++Before creating a release candidate:
++
++1. Working tree is clean.
++2. `west.yml` pins the intended Zephyr version.
++3. `dirty_jtag/VERSION` matches the planned release identifier.
++4. `host/requirements.txt` is reviewed.
++5. Native tests and syntax checks pass.
++6. CI builds every advertised firmware target.
++7. `docs/VALIDATION_MATRIX.md` reflects current evidence.
++8. Safety and known-limitations documentation are reviewed.
++
++## 3. Local verification
++
++```sh
++python -m pip install -r host/requirements.txt
++./scripts/test-native.sh
++./scripts/check-zephyr-syntax.sh
++./scripts/validate-release.sh
++```
++
++Optional local Zephyr builds:
++
++```sh
++make rpi-pico
++make bluepill
++make nodemcu-esp32s
++```
++
++## 4. Pull request requirements
++
++A release PR should contain:
++
++- version change;
++- release notes;
++- validation-matrix updates;
++- calibration changes, if any;
++- changed hardware profiles/descriptors;
++- explicit list of experimental features.
++
++The PR should not be merged if mandatory CI is failing.
++
++## 5. CI artifacts
++
++CI stages firmware files under per-board directories and generates `SHA256SUMS`.
++
++Expected candidate outputs include:
++
++```text
++dist/
++  rpi-pico/
++  bluepill/
++  olimex-stm32h103/
++  stm32-min-dev/
++  nodemcu-esp32s/
++  RELEASE_METADATA.txt
++  SHA256SUMS
++```
++
++The exact file extensions vary by board, but every staged board must include `zephyr.elf`.
++
++## 6. Hardware smoke test
++
++Before promotion from RC to production:
++
++1. Flash the CI-produced binary, not a local rebuild.
++2. Confirm USB/UART enumeration.
++3. Confirm safe idle at boot.
++4. Verify target voltage measurement.
++5. Verify target power on/off behavior.
++6. Verify fault detection.
++7. If applicable, verify VPP interlock with an instrumented test fixture.
++8. Execute at least one approved programming/debug smoke test for every production-supported protocol group.
++9. Record results in the validation matrix or linked validation report.
++
++## 7. Release metadata
++
++Archive:
++
++- git commit SHA;
++- git tag;
++- Zephyr revision;
++- DirtyJTAG version;
++- CI workflow run ID;
++- artifact SHA-256 file;
++- hardware revision;
++- calibration revision;
++- validation report/reviewer.
++
++## 8. Versioning
++
++Use semantic version components in `dirty_jtag/VERSION`. Avoid tying firmware identity to conversational revision letters.
++
++Suggested pre-release progression:
++
++```text
++2.0.0-rc1
++2.0.0-rc2
++2.0.0
++```
++
++## 9. Rollback
++
++If a production regression is discovered:
++
++1. stop promotion of the affected artifact;
++2. mark the release as withdrawn/deprecated;
++3. identify the last qualified release;
++4. reproduce the failure with archived artifacts;
++5. fix on a branch;
++6. repeat the full release process.
++
++Do not silently replace binaries under an existing version identifier.
+diff --git a/docs/VALIDATION_MATRIX.md b/docs/VALIDATION_MATRIX.md
+new file mode 100644
+index 0000000..636713d
+--- /dev/null
++++ b/docs/VALIDATION_MATRIX.md
+@@ -0,0 +1,66 @@
++# DirtyJTAG Validation Matrix
++
++This file records qualification evidence. Source-code presence is not qualification.
++
++## Status definitions
++
++- `qualified`: production acceptance evidence recorded.
++- `validated-lab`: real-hardware function demonstrated; environmental/edge qualification incomplete.
++- `ci-only`: unit/mock/build coverage only.
++- `experimental`: engineering use only.
++- `unsupported`: incomplete high-level implementation.
++- `not-recorded`: no auditable result currently committed.
++
++## Firmware platforms
++
++| Platform | Frontend | CI build | Hardware evidence in repo | Current status |
++|---|---|---:|---:|---|
++| Raspberry Pi Pico RP2040 | Universal DJP2 | yes | not sufficient for production qualification | `ci-only` |
++| DirtyJTAG Blue Pill STM32F103 | Legacy USB | yes | not recorded | `ci-only` |
++| Olimex STM32-H103 | Legacy USB | yes | not recorded | `ci-only` |
++| STM32 minimum dev STM32F103 | Legacy USB | yes | not recorded | `ci-only` |
++| NodeMCU ESP-32S | Legacy UART | added to production CI by this update | not recorded | `ci-only` |
++
++## Protocol and feature qualification
++
++| Feature/family | Software implementation | Real-hardware production evidence | Status |
++|---|---|---|---|
++| ARM SWD / generic JTAG transport | OpenOCD remote-bitbang path implemented | target-specific evidence not centrally recorded | `validated-lab` pending records |
++| dsPIC30F programming | high-level flow and HEX planning present | qualification record required per device | `experimental` |
++| dsPIC33F programming/debug | partial family/debug-executive architecture | qualification record required | `experimental` |
++| AVR ISP | flash/signature/fuse flows present | qualification record required per device | `experimental` |
++| AVR UPDI | transport + planning/HV activation architecture | high-level NVM qualification incomplete | `experimental` |
++| STM8 SWIM | native debug engine + RP2040 PIO work | timing/voltage qualification incomplete | `experimental` |
++| MSP430 SBW/JTAG | raw TAP/transport + host planning | erase/write/run-control qualification incomplete | `experimental` |
++| TMS320/C2000 | JTAG/XDS110-style transport | CCS/XDS personality and flash qualification incomplete | `experimental` |
++| TI CC13xx/CC26xx | SWD/cJTAG profile/backend architecture | device programming/debug qualification incomplete | `experimental` |
++| Silicon Labs C2 | transport/programming architecture | qualification record required | `experimental` |
++| Renesas RL78 | serial transport architecture | qualification record required | `experimental` |
++| RTT | memory-backend RTT handling present | backend-specific validation required | `experimental` |
++| SWO/ITM capture | control/ring-buffer architecture present | PIO timing capture validation incomplete | `experimental` |
++| SPI/I2C/UART/GPIO bridge | generic bridge commands present | voltage/timing/bus-contention validation required | `experimental` |
++| Target power/VPP measurement | implemented on RP2040 frontend | calibration and production fixture evidence required | `experimental` |
++
++## Required validation record fields
++
++For every production-qualified target add a row with:
++
++| Field | Required content |
++|---|---|
++| Date | ISO date |
++| Reviewer | accountable engineer |
++| DirtyJTAG commit/tag | exact source identifier |
++| Firmware SHA-256 | exact binary hash |
++| DirtyJTAG hardware revision | PCB/front-end revision |
++| Target board | exact board revision |
++| MCU | full orderable/device identifier |
++| Target voltage | measured nominal and tolerance |
++| Protocol | exact programming/debug interface |
++| Test equipment | DMM/scope/logic analyzer/programmer references |
++| Test cases | identify, erase, program, verify, debug, fault cases as applicable |
++| Result | pass/fail plus deviations |
++| Evidence | log/report/trace path |
++
++## Production promotion rule
++
++A protocol/device combination may be changed to `qualified` only when an auditable validation record covers the destructive operations and relevant electrical corner cases used in production.
+diff --git a/host/requirements.txt b/host/requirements.txt
+new file mode 100644
+index 0000000..5e2e816
+--- /dev/null
++++ b/host/requirements.txt
+@@ -0,0 +1,3 @@
++# DirtyJTAG host runtime dependencies.
++# Keep this file minimal and deterministic; utilities otherwise use the Python standard library.
++pyserial>=3.5,<4
+diff --git a/scripts/bootstrap.sh b/scripts/bootstrap.sh
+index ffa4d75..f713bf2 100755
+--- a/scripts/bootstrap.sh
++++ b/scripts/bootstrap.sh
+@@ -1,7 +1,12 @@
+ #!/usr/bin/env sh
+ set -eu
++
+ python3 -m pip install --user west
+-if [ ! -d .west ]; then west init -l .; fi
++python3 -m pip install --user -r host/requirements.txt
++
++if [ ! -d .west ]; then
++    west init -l .
++fi
+ west update
+ west zephyr-export
+ west build -b rpi_pico/rp2040 dirty_jtag
+diff --git a/scripts/validate-release.sh b/scripts/validate-release.sh
+new file mode 100755
+index 0000000..3d0026a
+--- /dev/null
++++ b/scripts/validate-release.sh
+@@ -0,0 +1,44 @@
++#!/usr/bin/env sh
++set -eu
++
++ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
++cd "$ROOT"
++
++required_files='\
++host/requirements.txt \
++docs/PRODUCTION_READY_DOCUMENTATION.md \
++docs/OPERATOR_GUIDE.md \
++docs/RELEASE_PROCESS.md \
++docs/VALIDATION_MATRIX.md \
++docs/ADC_CALIBRATION.md \
++docs/SAFETY_MEDICAL_GRADE_REVIEW.md \
++dirty_jtag/VERSION \
++west.yml'
++
++for f in $required_files; do
++    if [ ! -s "$f" ]; then
++        echo "release validation: missing or empty $f" >&2
++        exit 1
++    fi
++done
++
++if ! grep -q 'revision: v4.4.1' west.yml; then
++    echo 'release validation: west.yml is not pinned to reviewed Zephyr v4.4.1' >&2
++    exit 1
++fi
++
++if ! grep -q '^VERSION_MAJOR = ' dirty_jtag/VERSION; then
++    echo 'release validation: malformed dirty_jtag/VERSION' >&2
++    exit 1
++fi
++
++python3 -m py_compile host/*.py tests/*.py
++
++find host -type f -name '*.json' -print | sort | while IFS= read -r f; do
++    python3 -m json.tool "$f" >/dev/null
++ done
++
++./scripts/test-native.sh
++./scripts/check-zephyr-syntax.sh
++
++echo 'release validation: PASS'
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1,7 +1,21 @@
+-# DirtyJTAG Universal Pico Programmer + Debugger — Rev R
++# DirtyJTAG Universal Programmer + Debugger
+ 
+ A clean-room, Zephyr-based universal programming/debug probe for Raspberry Pi Pico (RP2040), structured for integration with the Zephyr DirtyJTAG refactor. One firmware image exposes USB-selectable backends for Microchip dsPIC/PIC ICSP, AVR interfaces, STM8 SWIM, MSP430 Spy-Bi-Wire/JTAG, TI TMS320/C2000 XDS110v3-style JTAG, Silicon Labs C2, Renesas RL78, ARM SWD and generic JTAG.
+ 
++## Production documentation
++
++The README is an overview. Production and qualification decisions are governed by the dedicated documentation set:
++
++- `docs/PRODUCTION_DOCUMENTATION_INDEX.md`
++- `docs/PRODUCTION_READY_DOCUMENTATION.md`
++- `docs/OPERATOR_GUIDE.md`
++- `docs/RELEASE_PROCESS.md`
++- `docs/VALIDATION_MATRIX.md`
++- `docs/ADC_CALIBRATION.md`
++- `docs/SAFETY_MEDICAL_GRADE_REVIEW.md`
++
++Feature presence does not imply production qualification; use `docs/VALIDATION_MATRIX.md` as the authoritative status record.
++
+ Rev D added the first native non-ARM debugger path: STM8 SWIM halt/run/step/register/breakpoint control through the public UM0470 debug module model. Rev E added a pluggable SWIM PHY and a Raspberry Pi Pico RP2040 PIO-assisted timing path. Rev H adds the dsPIC Debug-Executive clean-room control plane plus a USB script VM so niche MCU support can be configured from the host without reflashing the Pico. Rev M adds a separate TI TMS320/C2000 XDS110v3-style JTAG transport for C2000 bench bring-up. The project deliberately separates three levels of support:
+ 
+ 1. **electrical/physical transport** — safe pin control, level shifting, reset/VPP and target power;
+diff --git a/dirty_jtag/src/rpi_pico_hal.c b/dirty_jtag/src/rpi_pico_hal.c
+--- a/dirty_jtag/src/rpi_pico_hal.c
++++ b/dirty_jtag/src/rpi_pico_hal.c
+@@ -23,6 +23,15 @@
+ BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, aux_gpios),
+              "dirtyjtag-pico must define aux-gpios");
+ 
++BUILD_ASSERT(CONFIG_DJPROG_VPP_MIN_MV < CONFIG_DJPROG_VPP_MAX_MV,
++             "VPP minimum must be below VPP maximum");
++
++BUILD_ASSERT(CONFIG_DJPROG_3V3_MIN_MV < CONFIG_DJPROG_3V3_MAX_MV,
++             "3.3 V minimum must be below maximum");
++
++BUILD_ASSERT(CONFIG_DJPROG_5V_MIN_MV < CONFIG_DJPROG_5V_MAX_MV,
++             "5 V minimum must be below maximum");
++
+ /*
+  * Raspberry Pi Pico universal-programmer front end.
+  *
+@@ -207,6 +216,15 @@ static int adc_pin_mv(uint8_t ch, uint32_t *out)
+     return 0;
+ }
+ 
++static uint32_t apply_calibration(uint32_t nominal, int32_t scale_ppm, int32_t offset)
++{
++    int64_t corrected = ((int64_t)nominal * (int64_t)scale_ppm + 500000LL) / 1000000LL;
++    corrected += offset;
++    if (corrected <= 0) return 0u;
++    if ((uint64_t)corrected > UINT32_MAX) return UINT32_MAX;
++    return (uint32_t)corrected;
++}
++
+ static int measure(struct dj_measurement *m)
+ {
+     if (!m) return -EINVAL;
+@@ -214,15 +234,21 @@ static int measure(struct dj_measurement *m)
+     int r = adc_pin_mv(ADC_CH_VTARGET, &mv);
+     if (r) return r;
+-    m->vtarget_mv = mv * 2u;
++    uint32_t nominal_vtarget_mv = mv * 2u;
++    m->vtarget_mv = apply_calibration(nominal_vtarget_mv,
++        CONFIG_DJPROG_VTARGET_SCALE_PPM, CONFIG_DJPROG_VTARGET_OFFSET_MV);
+ 
+     r = adc_pin_mv(ADC_CH_VPP, &mv);
+     if (r) return r;
+-    m->vpp_mv = (mv * 43u + 5u) / 10u;
++    uint32_t nominal_vpp_mv = (mv * 43u + 5u) / 10u;
++    m->vpp_mv = apply_calibration(nominal_vpp_mv,
++        CONFIG_DJPROG_VPP_SCALE_PPM, CONFIG_DJPROG_VPP_OFFSET_MV);
+ 
+     r = adc_pin_mv(ADC_CH_ITARGET, &mv);
+     if (r) return r;
+     /* 0.1 ohm * INA180A2 gain 50 => 5 mV/mA. */
+-    m->itarget_ma = (mv + 2u) / 5u;
++    uint32_t nominal_itarget_ma = (mv + 2u) / 5u;
++    m->itarget_ma = apply_calibration(nominal_itarget_ma,
++        CONFIG_DJPROG_ITARGET_SCALE_PPM, CONFIG_DJPROG_ITARGET_OFFSET_MA);
+ 
+     int fault = gpio_pin_get_dt(&tgt_fault_n);
+     if (fault < 0) return fault;
+@@ -254,8 +280,10 @@ static int power(enum dj_power_mode m)
+ 
+     struct dj_measurement x = {0};
+     int r = measure(&x);
+-    uint32_t lo = m == DJ_PWR_3V3 ? 3000u : 4500u;
+-    uint32_t hi = m == DJ_PWR_3V3 ? 3650u : 5300u;
++    uint32_t lo = m == DJ_PWR_3V3 ?
++        CONFIG_DJPROG_3V3_MIN_MV : CONFIG_DJPROG_5V_MIN_MV;
++    uint32_t hi = m == DJ_PWR_3V3 ?
++        CONFIG_DJPROG_3V3_MAX_MV : CONFIG_DJPROG_5V_MAX_MV;
+     if (r || x.power_fault || x.vtarget_mv < lo || x.vtarget_mv > hi) {
+         local_power_off();
+         return r ? r : (x.power_fault ? -EIO : -ERANGE);
+@@ -291,7 +319,8 @@ static int vapply(bool on)
+         int r = measure(&m);
+         if (r) return r;
+         if (m.power_fault) return -EIO;
+-        if (m.vpp_mv < 10500u || m.vpp_mv > 13500u) return -ERANGE;
++        if (m.vpp_mv < CONFIG_DJPROG_VPP_MIN_MV ||
++            m.vpp_mv > CONFIG_DJPROG_VPP_MAX_MV) return -ERANGE;
+     }
+     vpp_on = on;
+     return gpio_pin_set_dt(&vpp_apply, on ? 1 : 0);

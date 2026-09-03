@@ -1,0 +1,112 @@
+name: Firmware builds
+
+on:
+  push:
+    branches:
+      - master
+      - feature/refactor_to_zephyr_based
+    paths:
+      - 'dirty_jtag/**'
+      - 'host/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'docs/**'
+      - 'hardware/**'
+      - 'west.yml'
+      - 'Makefile'
+      - '.github/workflows/firmware-builds.yml'
+  pull_request:
+    paths:
+      - 'dirty_jtag/**'
+      - 'host/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'docs/**'
+      - 'hardware/**'
+      - 'west.yml'
+      - 'Makefile'
+      - '.github/workflows/firmware-builds.yml'
+
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fetch sources
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install host dependencies
+        run: python -m pip install -r host/requirements.txt
+      - name: Run release structure validation
+        run: ./scripts/validate-release.sh
+
+  zephyr:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fetch sources
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up Zephyr workspace
+        uses: zephyrproject-rtos/action-zephyr-setup@v1
+        with:
+          app-path: .
+          toolchains: arm-zephyr-eabi:xtensa-espressif_esp32_zephyr-elf
+      - name: Build Raspberry Pi Pico RP2040
+        run: west build dirty_jtag -p always -b rpi_pico/rp2040 -d build-rpi-pico
+      - name: Build DirtyJTAG Blue Pill
+        run: west build dirty_jtag -p always -b dirtyjtag_bluepill/stm32f103xb -d build-bluepill -- -DEXTRA_CONF_FILE=legacy.conf
+      - name: Build Olimex STM32-H103
+        run: west build dirty_jtag -p always -b olimex_stm32_h103/stm32f103xb -d build-olimex-stm32h103 -- -DEXTRA_CONF_FILE=legacy.conf
+      - name: Build STM32 minimum dev board
+        run: west build dirty_jtag -p always -b stm32_min_dev/stm32f103xb -d build-stm32-min-dev -- -DEXTRA_CONF_FILE=legacy.conf
+      - name: Build NodeMCU ESP-32S
+        run: west build dirty_jtag -p always -b nodemcu_esp32s/esp32/procpu -d build-nodemcu-esp32s -- -DEXTRA_CONF_FILE=esp32s_nodemcu.conf
+      - name: Stage release-candidate artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage_board() {
+            name="$1"
+            build="$2"
+            out="dist/$name"
+            mkdir -p "$out"
+            for f in zephyr.elf zephyr.bin zephyr.hex zephyr.uf2 zephyr.map; do
+              if [ -f "$build/zephyr/$f" ]; then
+                cp "$build/zephyr/$f" "$out/$f"
+              fi
+            done
+            test -f "$out/zephyr.elf"
+          }
+          stage_board rpi-pico build-rpi-pico
+          stage_board bluepill build-bluepill
+          stage_board olimex-stm32h103 build-olimex-stm32h103
+          stage_board stm32-min-dev build-stm32-min-dev
+          stage_board nodemcu-esp32s build-nodemcu-esp32s
+          west manifest --freeze > dist/WEST_MANIFEST_FREEZE.yml
+          python -m pip freeze > dist/PYTHON_PACKAGES.txt
+          {
+            echo "GIT_SHA=${GITHUB_SHA}"
+            echo "GIT_REF=${GITHUB_REF}"
+            echo "ZEPHYR_REVISION=$(awk '/revision:/ {print $2; exit}' west.yml)"
+            echo "DIRTYJTAG_VERSION=$(tr '\n' ';' < dirty_jtag/VERSION)"
+          } > dist/RELEASE_METADATA.txt
+          (
+            cd dist
+            find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          )
+      - name: Upload firmware release-candidate artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dirtyjtag-firmware-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,11 @@
+tests:
+  dirtyjtag.native_sim.universal_core:
+    platform_allow:
+      - native_sim/native/64
+    tags:
+      - dirtyjtag
+      - native_sim
+      - programmer
+      - debugger
+    integration_platforms:
+      - native_sim/native/64

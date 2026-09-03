@@ -62,69 +62,11 @@ config DJPROG_MAX_PAYLOAD
 
 config DJPROG_VPP_MIN_MV
 	int "Minimum accepted VPP"
-	range 8000 15000
 	default 10500
 
 config DJPROG_VPP_MAX_MV
 	int "Maximum accepted VPP"
-	range 9000 16000
 	default 13250
-
-config DJPROG_3V3_MIN_MV
-	int "Minimum accepted internally-generated 3.3 V target rail"
-	range 2500 3400
-	default 3000
-
-config DJPROG_3V3_MAX_MV
-	int "Maximum accepted internally-generated 3.3 V target rail"
-	range 3300 4200
-	default 3650
-
-config DJPROG_5V_MIN_MV
-	int "Minimum accepted internally-generated 5 V target rail"
-	range 4000 5000
-	default 4500
-
-config DJPROG_5V_MAX_MV
-	int "Maximum accepted internally-generated 5 V target rail"
-	range 5000 6000
-	default 5300
-
-config DJPROG_VTARGET_SCALE_PPM
-	int "VTARGET measurement gain calibration in ppm"
-	range 800000 1200000
-	default 1000000
-	help
-	  Gain correction applied after the nominal x2 divider conversion.
-
-config DJPROG_VTARGET_OFFSET_MV
-	int "VTARGET measurement offset calibration in mV"
-	range -500 500
-	default 0
-
-config DJPROG_VPP_SCALE_PPM
-	int "VPP measurement gain calibration in ppm"
-	range 800000 1200000
-	default 1000000
-	help
-	  Gain correction applied after the nominal x4.3 divider conversion.
-
-config DJPROG_VPP_OFFSET_MV
-	int "VPP measurement offset calibration in mV"
-	range -1000 1000
-	default 0
-
-config DJPROG_ITARGET_SCALE_PPM
-	int "Target-current measurement gain calibration in ppm"
-	range 800000 1200000
-	default 1000000
-	help
-	  Gain correction applied after the nominal 5 mV/mA conversion.
-
-config DJPROG_ITARGET_OFFSET_MA
-	int "Target-current measurement offset calibration in mA"
-	range -100 100
-	default 0
 
 config DJPROG_SWIM_RP2040_PIO
 	bool "Use RP2040 PIO-assisted STM8 SWIM PHY"
