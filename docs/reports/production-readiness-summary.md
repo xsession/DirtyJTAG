@@ -23,8 +23,8 @@ From the repository root on the reviewed branch:
 ```sh
 git checkout feature/refactor_to_zephyr_based
 git pull --ff-only
-git apply --check DirtyJTAG-production-readiness.patch
-git apply DirtyJTAG-production-readiness.patch
+git apply --check contrib/patches/production-readiness.patch
+git apply contrib/patches/production-readiness.patch
 python -m pip install -r host/requirements.txt
 ./scripts/validate-release.sh
 git add .

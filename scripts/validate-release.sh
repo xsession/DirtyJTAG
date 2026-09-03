@@ -4,6 +4,8 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT"
 
+: "${PYTHON:=python3}"
+
 required_files='\
 host/requirements.txt \
 docs/PRODUCTION_READY_DOCUMENTATION.md \
@@ -32,11 +34,9 @@ if ! grep -q '^VERSION_MAJOR = ' dirty_jtag/VERSION; then
     exit 1
 fi
 
-python3 -m py_compile host/*.py tests/*.py
+"$PYTHON" -m py_compile host/*.py tests/*.py
 
-find host -type f -name '*.json' -print | sort | while IFS= read -r f; do
-    python3 -m json.tool "$f" >/dev/null
- done
+"$PYTHON" -c "import json,pathlib; [json.load(open(p, encoding='utf-8')) for p in sorted(pathlib.Path('host').rglob('*.json'))]"
 
 ./scripts/test-native.sh
 ./scripts/check-zephyr-syntax.sh

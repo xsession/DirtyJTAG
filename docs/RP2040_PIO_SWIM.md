@@ -34,7 +34,7 @@ The PIO PHY owns packet-level timing only.
 - `include/djprog/swim_phy.h`
 - `src/swim.c`
 - `src/swim_rp2040_pio.c`
-- `src/backend_swim.c`
+- `src/backends/backend_swim.c`
 
 ## USB inspection
 
