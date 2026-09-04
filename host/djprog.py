@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """DirtyJTAG Universal Programmer host CLI (DJP2 over USB CDC ACM)."""
 from __future__ import annotations
-import argparse, binascii, json, os, struct, time
+import argparse, json, os, struct, time
 try:
-    import serial
-except ImportError:
-    serial = None
-try:
+    from djp2 import CMD, HDR, MAX_PAYLOAD, POWER, PROTO, Link, crc32, pack, unpack
+    from djprog_core import (CAP_READ, CAP_WRITE, SAFETY_CONFIRM_PHRASE, SAFETY_FLAGS,
+                             cmd_config, command_safety_flags, decode_status, dspic_row_plan_from_hex,
+                             get_devices, print_measure, program_dspic_hex, read_chunk,
+                             require_safety_confirmation, safety_arm, safety_status, write_chunk)
+    from djprog_trace import (print_rtt_info, rtt_channel_info, rtt_info, rtt_log, rtt_print_channels,
+                              rtt_read, rtt_scan, rtt_tail, rtt_terminals_once, rtt_write, swo_config,
+                              swo_read, swo_status, swo_tail)
     from hex_utils import (HexError, dspic_words_from_ihex, make_dspic_rows,
                            pack_dspic_row_words, summarize_dspic_rows)
     from avr_utils import (avr_memop_from_ihex, avrdude_like_signature,
@@ -34,6 +38,14 @@ try:
     from bridge_tools import bridge_spi_payload, bridge_i2c_payload, bridge_uart_payload, decode_power_trace
     from production_jobs import load_job, summarize_job, make_default_job
 except ImportError:  # Allows direct unit import from outside host/.
+    from host.djp2 import CMD, HDR, MAX_PAYLOAD, POWER, PROTO, Link, crc32, pack, unpack
+    from host.djprog_core import (CAP_READ, CAP_WRITE, SAFETY_CONFIRM_PHRASE, SAFETY_FLAGS,
+                                  cmd_config, command_safety_flags, decode_status, dspic_row_plan_from_hex,
+                                  get_devices, print_measure, program_dspic_hex, read_chunk,
+                                  require_safety_confirmation, safety_arm, safety_status, write_chunk)
+    from host.djprog_trace import (print_rtt_info, rtt_channel_info, rtt_info, rtt_log, rtt_print_channels,
+                                   rtt_read, rtt_scan, rtt_tail, rtt_terminals_once, rtt_write, swo_config,
+                                   swo_read, swo_status, swo_tail)
     from host.hex_utils import (HexError, dspic_words_from_ihex, make_dspic_rows,
                                 pack_dspic_row_words, summarize_dspic_rows)
     from host.avr_utils import (avr_memop_from_ihex, avrdude_like_signature,
@@ -61,309 +73,8 @@ except ImportError:  # Allows direct unit import from outside host/.
     from host.bridge_tools import bridge_spi_payload, bridge_i2c_payload, bridge_uart_payload, decode_power_trace
     from host.production_jobs import load_job, summarize_job, make_default_job
 
-MAGIC=0x32504A44; VER=2; HDR=20; MAX_PAYLOAD=2048
-CMD={'hello':1,'list':2,'config':3,'status':4,'devices':5,
-     'enter':0x10,'leave':0x11,'identify':0x12,
-     'erase':0x20,'read':0x21,'write':0x22,'raw':0x30,
-     'power':0x40,'measure':0x41,'pinmap':0x42,'vpp':0x43,'phy-info':0x44,'script':0x45,
-     'bridge-info':0x46,'bridge-gpio':0x47,'bridge-spi':0x48,'bridge-i2c':0x49,'bridge-uart':0x4a,'power-trace':0x4b,
-     'safety-status':0x4c,'safety-arm':0x4d,'safety-disarm':0x4e,
-     'debug-info':0x51,'debug-attach':0x52,'debug-detach':0x53,
-     'debug-halt':0x54,'debug-run':0x55,'debug-step':0x56,'debug-reset':0x57,
-     'debug-reg-read':0x58,'debug-reg-write':0x59,'debug-bp-set':0x5a,'debug-bp-clear':0x5b,
-     'rtt-scan':0x60,'rtt-info':0x61,'rtt-read':0x62,'rtt-write':0x63,'rtt-channel-info':0x64,
-     'swo-config':0x68,'swo-start':0x69,'swo-stop':0x6a,'swo-read':0x6b,'swo-status':0x6c,
-     'safe':0x7e}
-PROTO={'dspic':1,'pic24':2,'pic-raw':3,'avr-isp':10,'updi':11,'tpi':12,'pdi':13,
-       'swim':20,'sbw':30,'msp430-jtag':31,'c2':40,'rl78':50,'swd':60,'jtag':61,'tms320':70,'c2000':70,'xds110v3':70,
-       'simplelink-swd':80,'cc13xx-swd':80,'cc26xx-swd':80,'simplelink-cjtag':81,'cc13xx-cjtag':81,'cc26xx-cjtag':81}
-POWER={'off':0,'external':1,'3v3':2,'5v':3}
 FAMILY={0:'dsPIC30',1:'dsPIC33F',2:'dsPIC33E',3:'dsPIC33CK',4:'dsPIC33A'}
-CAP_WRITE=1<<3; CAP_READ=1<<2
-SAFETY_CONFIRM_PHRASE='I understand this can damage hardware'
-SAFETY_FLAGS={'erase':1<<0,'write':1<<1,'vpp':1<<2,'script':1<<3,'bridge':1<<4,'power':1<<5,'debug':1<<6}
 ALG_DIR=os.path.join(os.path.dirname(__file__), "algorithms")
-
-def crc32(data,seed=0): return binascii.crc32(data,seed)&0xffffffff
-
-def pack(cmd,seq,payload=b'',flags=0,status=0):
-    if len(payload)>MAX_PAYLOAD: raise ValueError(f'payload too large: {len(payload)} > {MAX_PAYLOAD}')
-    h=struct.pack('<IHHHHHIH',MAGIC,VER,cmd,seq,status,flags,len(payload),0)
-    c=crc32(payload,crc32(h[:18])); fold=(c^(c>>16))&0xffff
-    return h[:18]+struct.pack('<H',fold)+payload
-
-def unpack(data):
-    if len(data)<HDR: raise ValueError('short frame')
-    magic,ver,cmd,seq,status,flags,n,fold=struct.unpack('<IHHHHHIH',data[:HDR])
-    if magic!=MAGIC or ver!=VER or len(data)!=HDR+n: raise ValueError('bad frame')
-    c=crc32(data[HDR:],crc32(data[:18]))
-    if ((c^(c>>16))&0xffff)!=fold: raise ValueError('bad crc')
-    return cmd,seq,status,flags,data[HDR:]
-
-class Link:
-    def __init__(self,port,baud=115200,timeout=3):
-        if serial is None: raise SystemExit('Install pyserial: python -m pip install pyserial')
-        self.s=serial.Serial(port,baudrate=baud,timeout=timeout)
-        self.seq=1; time.sleep(.1); self.s.reset_input_buffer()
-    def x(self,cmd,p=b''):
-        q=pack(cmd,self.seq,p); seq=self.seq; self.seq=(self.seq+1)&0xffff
-        self.s.write(q); self.s.flush()
-        h=self.s.read(HDR)
-        if len(h)!=HDR: raise TimeoutError('no DJP2 reply')
-        n=struct.unpack_from('<I',h,14)[0]
-        body=self.s.read(n); _,s,st,_,p=unpack(h+body)
-        if s!=seq: raise RuntimeError(f'sequence mismatch {s}!={seq}')
-        if st: raise RuntimeError(f'device status={st}')
-        return p
-
-def safety_arm(l, flags, uses=100000):
-    if not flags:
-        return
-    phrase=SAFETY_CONFIRM_PHRASE.encode()
-    payload=struct.pack('<IIB', flags, uses, len(phrase)) + phrase
-    l.x(CMD['safety-arm'], payload)
-
-def safety_status(l):
-    b=l.x(CMD['safety-status'])
-    if len(b)!=8:
-        raise RuntimeError(f'unexpected safety-status length {len(b)}')
-    flags,uses=struct.unpack('<II',b)
-    names=[name for name,bit in SAFETY_FLAGS.items() if flags & bit]
-    print(f'safety_armed={"|".join(names) if names else "none"} remaining_uses={uses}')
-
-def command_safety_flags(a):
-    cmd=getattr(a,'cmd','')
-    flags=0
-    if cmd in ('erase',): flags |= SAFETY_FLAGS['erase']
-    if cmd in ('write','program') or (cmd in ('program-hex','program-avr-hex') and not getattr(a,'dry_run',False)):
-        flags |= SAFETY_FLAGS['write']
-    if getattr(a,'erase',False) and cmd in ('program','program-hex','program-avr-hex'):
-        flags |= SAFETY_FLAGS['erase']
-    if cmd == 'power': flags |= SAFETY_FLAGS['power']
-    if cmd == 'vpp': flags |= SAFETY_FLAGS['vpp']
-    if cmd == 'script': flags |= SAFETY_FLAGS['script']
-    if cmd in ('bridge-gpio','bridge-spi','bridge-i2c','bridge-uart'):
-        flags |= SAFETY_FLAGS['bridge']
-    return flags
-
-def require_safety_confirmation(a, flags):
-    if not flags:
-        return
-    if getattr(a,'safety_confirm',False):
-        return
-    names=', '.join(name for name,bit in SAFETY_FLAGS.items() if flags & bit)
-    raise SystemExit(f'Command requires explicit safety authorization for: {names}. Re-run with --safety-confirm after verifying target isolation, voltage, pinout, and risk controls.')
-
-def cmd_config(l,a):
-    name=a.device.encode()
-    if len(name)>47: raise ValueError('device name too long')
-    cfg_flags = 1 if getattr(a,'hv_activate',False) else 0
-    payload=struct.pack('<HBBIIIHB',PROTO[a.protocol],POWER[a.power],cfg_flags,a.clock,
-                        a.vtarget,a.flash_size,a.page_size,len(name))+name
-    l.x(CMD['config'],payload)
-
-def decode_status(b):
-    if len(b)<28: raise RuntimeError(f'unexpected status length {len(b)}')
-    # Backward-compatible first 28 bytes.
-    pid,pwr,nlen,clk,caps,vt,vp,ma,flags=struct.unpack_from('<HBBIIIIII',b,0)
-    flash=page=cfg_flags=0; dev=''
-    if len(b)>=36:
-        flash=struct.unpack_from('<I',b,28)[0]
-        page,cfg_flags=struct.unpack_from('<HH',b,32)
-        if nlen and len(b)>=36+nlen: dev=b[36:36+nlen].decode(errors='replace')
-    return dict(pid=pid,power=pwr,clock=clk,caps=caps,vt=vt,vpp=vp,current=ma,
-                fault=bool(flags&1),flash=flash,page=page,cfg_flags=cfg_flags,device=dev)
-
-def get_devices(l):
-    b=l.x(CMD['devices']); o=0; out=[]
-    while o<len(b):
-        if o+14>len(b): raise RuntimeError('truncated device list')
-        fam,n,row,page,flags,end=struct.unpack_from('<BBHHII',b,o); o+=14
-        if o+n>len(b): raise RuntimeError('truncated device name')
-        name=b[o:o+n].decode(); o+=n
-        out.append(dict(family=fam,name=name,row=row,page=page,flags=flags,end=end))
-    return out
-
-def print_measure(b):
-    if len(b)==8:
-        vt,vp=struct.unpack('<II',b); print(f'VTARGET={vt/1000:.3f} V  VPP={vp/1000:.3f} V'); return
-    if len(b)<16: raise RuntimeError(f'unexpected measurement length {len(b)}')
-    vt,vp,ma,fl=struct.unpack_from('<IIII',b)
-    print(f'VTARGET={vt/1000:.3f} V  VPP={vp/1000:.3f} V  ITARGET={ma} mA  POWER_FAULT={bool(fl&1)}')
-
-def write_chunk(l,address,data):
-    if len(data)>MAX_PAYLOAD-8: raise ValueError('write chunk too large')
-    l.x(CMD['write'],struct.pack('<II',address,len(data))+data)
-
-def read_chunk(l,address,length):
-    if length>MAX_PAYLOAD: raise ValueError('read chunk too large')
-    return l.x(CMD['read'],struct.pack('<II',address,length))
-
-
-def dspic_row_plan_from_hex(path, dev, include_config=False, fill_word=0xffffff):
-    words = dspic_words_from_ihex(path, include_config=include_config)
-    rows = make_dspic_rows(words, dev['row'], dev['end'], fill_word)
-    return rows
-
-def program_dspic_hex(l, path, verify=False, erase=False, include_config=False, dry_run=False, fill_word=0xffffff):
-    if l is None:
-        # Offline dry-run path uses conservative dsPIC30F5011 defaults unless --device-profile is supplied later.
-        raise RuntimeError('program-hex without --port requires --dry-run and --device-profile support from caller')
-    st = decode_status(l.x(CMD['status']))
-    if st['pid'] != PROTO['dspic']:
-        raise RuntimeError('program-hex currently supports selected dspic backend only')
-    if not (st['caps'] & CAP_WRITE):
-        raise RuntimeError('selected backend has no high-level WRITE capability')
-    dev = next((d for d in get_devices(l) if d['name'] == st['device']), None)
-    if not dev:
-        raise RuntimeError('selected dsPIC device profile not found; CONFIG with --device first')
-    rows = dspic_row_plan_from_hex(path, dev, include_config=include_config, fill_word=fill_word)
-    print('dsPIC HEX plan:', summarize_dspic_rows(rows))
-    print(f'device={dev["name"]} row_words={dev["row"]} user_end=0x{dev["end"]:06x}')
-    if dry_run:
-        for row in rows[:12]:
-            nonblank=sum(1 for w in row.words if w != fill_word)
-            print(f'  row PC 0x{row.pc_address:06x}: {nonblank}/{len(row.words)} non-erased words')
-        if len(rows)>12: print(f'  ... {len(rows)-12} more rows')
-        return
-    if not rows:
-        print('nothing to program')
-        return
-    if erase:
-        l.x(CMD['erase'])
-    done = 0
-    total = len(rows)
-    for row in rows:
-        block = pack_dspic_row_words(row.words)
-        write_chunk(l, row.pc_address, block)
-        if verify:
-            got = read_chunk(l, row.pc_address, len(block))
-            if got != block:
-                for i, (a, b) in enumerate(zip(block, got)):
-                    if a != b:
-                        pc = row.pc_address + 2 * (i // 3)
-                        raise RuntimeError(f'verify failed near PC 0x{pc:06x}, row byte +0x{i:x}: wrote {a:02x}, read {b:02x}')
-                raise RuntimeError(f'verify mismatch at row PC 0x{row.pc_address:06x}')
-        done += 1
-        print(f'programmed row {done}/{total} at PC 0x{row.pc_address:06x}', end='\r', flush=True)
-    print(f'programmed {total} dsPIC rows OK' + (' + verified' if verify else ''))
-
-
-
-def rtt_scan(l, start, end):
-    b = l.x(CMD['rtt-scan'], struct.pack('<II', start, end))
-    if len(b) != 4:
-        raise RuntimeError(f'unexpected RTT scan response length {len(b)}')
-    return struct.unpack('<I', b)[0]
-
-
-def rtt_info(l, cb):
-    b = l.x(CMD['rtt-info'], struct.pack('<I', cb))
-    if len(b) != 60:
-        raise RuntimeError(f'unexpected RTT info response length {len(b)}')
-    keys = ('cb','max_up','max_down','up_name','up_buffer','up_size','up_wr','up_rd','up_flags',
-            'down_name','down_buffer','down_size','down_wr','down_rd','down_flags')
-    return dict(zip(keys, struct.unpack('<15I', b)))
-
-
-def print_rtt_info(info):
-    print(f'RTT cb=0x{info["cb"]:08x} up={info["max_up"]} down={info["max_down"]}')
-    print(f'  up0:   buf=0x{info["up_buffer"]:08x} size={info["up_size"]} wr={info["up_wr"]} rd={info["up_rd"]} flags=0x{info["up_flags"]:08x}')
-    print(f'  down0: buf=0x{info["down_buffer"]:08x} size={info["down_size"]} wr={info["down_wr"]} rd={info["down_rd"]} flags=0x{info["down_flags"]:08x}')
-
-
-def rtt_read(l, cb, channel, length):
-    if length > MAX_PAYLOAD:
-        raise ValueError(f'RTT read length limited to {MAX_PAYLOAD}')
-    return l.x(CMD['rtt-read'], struct.pack('<IBH', cb, channel, length))
-
-
-def rtt_write(l, cb, channel, data):
-    if len(data) > MAX_PAYLOAD - 5:
-        raise ValueError(f'RTT write limited to {MAX_PAYLOAD - 5} bytes')
-    b = l.x(CMD['rtt-write'], struct.pack('<IB', cb, channel) + data)
-    if len(b) != 4:
-        raise RuntimeError(f'unexpected RTT write response length {len(b)}')
-    return struct.unpack('<I', b)[0]
-
-
-
-def rtt_channel_info(l, cb, direction, channel):
-    b = l.x(CMD['rtt-channel-info'], struct.pack('<IBB', cb, direction, channel))
-    if len(b) < 36:
-        raise RuntimeError(f'unexpected RTT channel response length {len(b)}')
-    d, ch, n = b[0], b[1], b[2]
-    vals = struct.unpack_from('<8I', b, 4)
-    name = b[36:36+n].decode(errors='replace') if len(b) >= 36+n else ''
-    return dict(direction=d, channel=ch, name=name, name_addr=vals[0], buffer=vals[1],
-                size=vals[2], wr=vals[3], rd=vals[4], flags=vals[5], used=vals[6], free=vals[7])
-
-def rtt_print_channels(l, cb):
-    info = rtt_info(l, cb)
-    print(f'RTT cb=0x{cb:08x} up={info["max_up"]} down={info["max_down"]}')
-    for direction, count, label in ((0, info['max_up'], 'up'), (1, info['max_down'], 'down')):
-        for ch in range(count):
-            ci = rtt_channel_info(l, cb, direction, ch)
-            print(f'  {label}{ch}: name={ci["name"] or "-"!s:16s} buf=0x{ci["buffer"]:08x} size={ci["size"]:6d} wr={ci["wr"]:6d} rd={ci["rd"]:6d} used={ci["used"]:6d} free={ci["free"]:6d} flags=0x{ci["flags"]:08x}')
-
-def rtt_log(l, cb, channel, output, seconds, interval_ms, append=False):
-    mode = 'ab' if append else 'wb'
-    end = None if seconds is None else time.time() + seconds
-    total = 0
-    with open(output, mode) as f:
-        while end is None or time.time() < end:
-            data = rtt_read(l, cb, channel, min(1024, MAX_PAYLOAD))
-            if data:
-                f.write(data); f.flush(); total += len(data)
-            time.sleep(max(interval_ms, 1) / 1000.0)
-    print(f'logged {total} bytes to {output}')
-
-def rtt_tail(l, cb, channel, seconds, interval_ms, terminal=None, strip_ansi=False):
-    end = None if seconds is None else time.time() + seconds
-    while end is None or time.time() < end:
-        data = rtt_read(l, cb, channel, min(1024, MAX_PAYLOAD))
-        if data:
-            if terminal is not None:
-                split = split_virtual_terminals(data)
-                data = split.terminals.get(terminal, b'')
-            if data:
-                print(printable(data, strip_control=strip_ansi), end='', flush=True)
-        time.sleep(max(interval_ms, 1) / 1000.0)
-
-def rtt_terminals_once(l, cb, length, terminal=None, strip_ansi=False):
-    data = rtt_read(l, cb, 0, length)
-    split = split_virtual_terminals(data)
-    if terminal is not None:
-        print(printable(split.terminals.get(terminal, b''), strip_control=strip_ansi), end='')
-        return
-    for tid, payload in sorted(split.terminals.items()):
-        print(f'--- terminal {tid} ---')
-        print(printable(payload, strip_control=strip_ansi), end='')
-        if payload and not payload.endswith(b'\n'):
-            print()
-
-def swo_config(l, baud, flags):
-    l.x(CMD['swo-config'], struct.pack('<II', baud, flags))
-
-def swo_status(l):
-    b = l.x(CMD['swo-status'])
-    if len(b) != 20:
-        raise RuntimeError(f'unexpected SWO status length {len(b)}')
-    baud, flags, avail, dropped = struct.unpack_from('<IIII', b, 0)
-    return dict(baud=baud, flags=flags, available=avail, dropped=dropped, active=bool(b[16]))
-
-def swo_read(l, length):
-    if length > MAX_PAYLOAD:
-        raise ValueError(f'SWO read length limited to {MAX_PAYLOAD}')
-    return l.x(CMD['swo-read'], struct.pack('<H', length))
-
-def swo_tail(l, seconds, interval_ms, strip_ansi=False):
-    end = None if seconds is None else time.time() + seconds
-    while end is None or time.time() < end:
-        data = swo_read(l, min(1024, MAX_PAYLOAD))
-        if data:
-            print(printable(data, strip_control=strip_ansi), end='', flush=True)
-        time.sleep(max(interval_ms, 1) / 1000.0)
 
 def avr_isp_cmd(l, a, b, c, d):
     """Execute one 4-byte AVR ISP instruction through the backend raw path."""
