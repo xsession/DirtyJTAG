@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: MIT */
 #ifndef DJPK4_POWER_H
 #define DJPK4_POWER_H
-#include <stdbool.h>
 #include "djpk4/device.h"
+#include <stdbool.h>
 int dj_power_init(void);
 int dj_power_prepare(const struct dj_device *dev);
 int dj_power_shutdown(void);

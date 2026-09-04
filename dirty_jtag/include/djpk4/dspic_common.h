@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: MIT */
 #ifndef DJPK4_DSPIC_COMMON_H
 #define DJPK4_DSPIC_COMMON_H
+#include "djpk4/device.h"
 #include <stddef.h>
 #include <stdint.h>
-#include "djpk4/device.h"
 
 #define DSPIC_NOP 0x000000u
 #define DSPIC_GOTO_100 0x040100u
@@ -19,8 +19,7 @@ void dspic_unpack4(const uint16_t w[6], uint32_t out[4]);
 int dspic_load_wregs_0_5(const uint16_t w[6]);
 int dspic_table_load4(unsigned nop_count);
 int dspic_read4_common(uint32_t pc_addr, uint32_t out[4], uint32_t goto_insn,
-                       uint32_t mov_tblpag_opcode, uint32_t mov_visi_base,
-                       unsigned tbl_nops);
+                       uint32_t mov_tblpag_opcode, uint32_t mov_visi_base, unsigned tbl_nops);
 int dspic_poll_wr(uint32_t mov_nvmcon_w0, uint32_t mov_w0_visi, uint32_t goto_insn,
                   unsigned timeout_ms, unsigned extra_nops);
 #endif

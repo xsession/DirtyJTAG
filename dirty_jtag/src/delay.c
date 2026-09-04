@@ -22,9 +22,8 @@
 #include <stdint.h>
 #include <zephyr/kernel.h>
 
-void delay_init(void) {
-}
+void delay_init(void) {}
 
 void delay_us(uint32_t delay_val) {
-  k_busy_wait(delay_val);
+	k_busy_wait(delay_val);
 }

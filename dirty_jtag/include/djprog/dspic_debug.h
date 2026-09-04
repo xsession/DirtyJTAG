@@ -8,11 +8,11 @@
 #define DJ_DSPIC_DEBUG_REG_BYTES 42u /* W0..W15, PC24, SR, WREG shadow/alignment room */
 
 struct dj_dspic_debug_capsule_info {
-    uint8_t loaded;
-    uint8_t family;
-    uint8_t hw_breakpoints;
-    uint8_t register_bytes;
-    uint32_t flags;
+	uint8_t loaded;
+	uint8_t family;
+	uint8_t hw_breakpoints;
+	uint8_t register_bytes;
+	uint32_t flags;
 };
 
 void dj_dspic_debug_backend_changed(void);

@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -eu
+
+if ! command -v clang-format >/dev/null 2>&1; then
+    echo "pre-commit: clang-format is required but was not found in PATH" >&2
+    exit 1
+fi
+
+git diff --cached --name-only --diff-filter=ACMR -z -- \
+    '*.c' '*.cc' '*.cpp' '*.cxx' '*.h' '*.hh' '*.hpp' '*.hxx' |
+    xargs -0 -r clang-format -i --style=file
+
+git diff --cached --name-only --diff-filter=ACMR -z -- \
+    '*.c' '*.cc' '*.cpp' '*.cxx' '*.h' '*.hh' '*.hpp' '*.hxx' |
+    xargs -0 -r git add --

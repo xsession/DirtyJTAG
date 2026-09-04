@@ -28,8 +28,8 @@
 #define DIRTYJTAG_USB_BUFFER_SIZE 64
 
 struct dirtyjtag_usb_transfer {
-  const uint8_t *buffer;
-  uint32_t transferred;
+	const uint8_t *buffer;
+	uint32_t transferred;
 };
 
 /**

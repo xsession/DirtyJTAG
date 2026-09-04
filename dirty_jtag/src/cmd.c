@@ -19,39 +19,39 @@
   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 
+#include "cmd.h"
 #include "jtag.h"
 #include "usb.h"
-#include "cmd.h"
 
 enum CommandIdentifier {
-  CMD_STOP = 0x00,
-  CMD_INFO = 0x01,
-  CMD_FREQ = 0x02,
-  CMD_XFER = 0x03,
-  CMD_SETSIG = 0x04,
-  CMD_GETSIG = 0x05,
-  CMD_CLK = 0x06
+	CMD_STOP = 0x00,
+	CMD_INFO = 0x01,
+	CMD_FREQ = 0x02,
+	CMD_XFER = 0x03,
+	CMD_SETSIG = 0x04,
+	CMD_GETSIG = 0x05,
+	CMD_CLK = 0x06
 };
 
 enum CommandModifier {
-  // CMD_XFER
-  NO_READ = 0x80,
-  EXTEND_LENGTH = 0x40,
-  // CMD_CLK
-  READOUT = 0x80,
+	// CMD_XFER
+	NO_READ = 0x80,
+	EXTEND_LENGTH = 0x40,
+	// CMD_CLK
+	READOUT = 0x80,
 };
 
 enum SignalIdentifier {
-  SIG_TCK = 1 << 1,
-  SIG_TDI = 1 << 2,
-  SIG_TDO = 1 << 3,
-  SIG_TMS = 1 << 4,
-  SIG_TRST = 1 << 5,
-  SIG_SRST = 1 << 6
+	SIG_TCK = 1 << 1,
+	SIG_TDI = 1 << 2,
+	SIG_TDO = 1 << 3,
+	SIG_TMS = 1 << 4,
+	SIG_TRST = 1 << 5,
+	SIG_SRST = 1 << 6
 };
 
 /**
@@ -84,7 +84,8 @@ static void cmd_freq(const uint8_t *commands);
  * @param usbd_dev USB device
  * @param commands Command data
  */
-static uint32_t cmd_xfer(const uint8_t *commands, bool extend_length, bool no_read, uint8_t *output_buffer);
+static uint32_t cmd_xfer(const uint8_t *commands, bool extend_length, bool no_read,
+                         uint8_t *output_buffer);
 
 /**
  * @brief Handle CMD_SETSIG command
@@ -118,141 +119,136 @@ static uint32_t cmd_clk(const uint8_t *commands, bool readout, uint8_t *output_b
 static uint8_t tx_buffer[64];
 
 uint8_t cmd_handle(const struct dirtyjtag_usb_transfer *transfer) {
-  const uint8_t *rxbuf = transfer->buffer;
-  uint32_t count = transfer->transferred;
-  const uint8_t *commands = rxbuf;
-  uint8_t *output_buffer = tx_buffer;
+	const uint8_t *rxbuf = transfer->buffer;
+	uint32_t count = transfer->transferred;
+	const uint8_t *commands = rxbuf;
+	uint8_t *output_buffer = tx_buffer;
 
-  while ((commands < (rxbuf + count)) && (*commands != CMD_STOP))
-  {
-    switch ((*commands)&0x0F) {
-    case CMD_INFO:
-      output_buffer += cmd_info(output_buffer);
-      break;
+	while ((commands < (rxbuf + count)) && (*commands != CMD_STOP)) {
+		switch ((*commands) & 0x0F) {
+		case CMD_INFO:
+			output_buffer += cmd_info(output_buffer);
+			break;
 
-    case CMD_FREQ:
-      cmd_freq(commands);
-      commands += 2;
-      break;
+		case CMD_FREQ:
+			cmd_freq(commands);
+			commands += 2;
+			break;
 
-    case CMD_XFER:
-      {
-        bool no_read = *commands & NO_READ;
-        uint32_t trbytes = cmd_xfer(commands, *commands & EXTEND_LENGTH, no_read, output_buffer);
-        commands += 1 + trbytes;
-        output_buffer += (no_read ? 0 : trbytes);
-      }
-      break;
+		case CMD_XFER: {
+			bool no_read = *commands & NO_READ;
+			uint32_t trbytes =
+			    cmd_xfer(commands, *commands & EXTEND_LENGTH, no_read, output_buffer);
+			commands += 1 + trbytes;
+			output_buffer += (no_read ? 0 : trbytes);
+		} break;
 
-    case CMD_SETSIG:
-      cmd_setsig(commands);
-      commands += 2;
-      break;
+		case CMD_SETSIG:
+			cmd_setsig(commands);
+			commands += 2;
+			break;
 
-    case CMD_GETSIG:
-      output_buffer += cmd_getsig(output_buffer);
-      break;
+		case CMD_GETSIG:
+			output_buffer += cmd_getsig(output_buffer);
+			break;
 
-    case CMD_CLK:
-      output_buffer += cmd_clk(commands, !!(*commands & READOUT), output_buffer);
-      commands += 2;
-      break;
+		case CMD_CLK:
+			output_buffer += cmd_clk(commands, !!(*commands & READOUT), output_buffer);
+			commands += 2;
+			break;
 
-    default:
-      return 1; /* Unsupported command, halt */
-      break;
-    }
+		default:
+			return 1; /* Unsupported command, halt */
+			break;
+		}
 
-    commands++;
-  }
-  /* Send the transfer response back to host */
-  if (tx_buffer != output_buffer)
-    usb_send(tx_buffer, output_buffer - tx_buffer);
-  return 1;
+		commands++;
+	}
+	/* Send the transfer response back to host */
+	if (tx_buffer != output_buffer)
+		usb_send(tx_buffer, output_buffer - tx_buffer);
+	return 1;
 }
 
 static uint32_t cmd_info(uint8_t *buffer) {
-  char info_string[10] = "DJTAG2\n";
-  memcpy(buffer, info_string, 10);
-  return 10;
+	char info_string[10] = "DJTAG2\n";
+	memcpy(buffer, info_string, 10);
+	return 10;
 }
 
 static void cmd_freq(const uint8_t *commands) {
-  jtag_set_frequency((commands[1] << 8) | commands[2]);
+	jtag_set_frequency((commands[1] << 8) | commands[2]);
 }
 
-static uint32_t cmd_xfer(const uint8_t *commands, bool extend_length, bool no_read, uint8_t *output_buffer) {
-  uint16_t transferred_bits = commands[1];
-  
+static uint32_t cmd_xfer(const uint8_t *commands, bool extend_length, bool no_read,
+                         uint8_t *output_buffer) {
+	uint16_t transferred_bits = commands[1];
 
-  /* This is the number of transfered bits in one transfer command */
-  transferred_bits = commands[1];
-  if (extend_length)
-    transferred_bits += 256;
-  // Ensure we don't do over-read
-  if (transferred_bits > 62 * 8)
-  {
-    transferred_bits = 62 * 8;
-  }
+	/* This is the number of transfered bits in one transfer command */
+	transferred_bits = commands[1];
+	if (extend_length)
+		transferred_bits += 256;
+	// Ensure we don't do over-read
+	if (transferred_bits > 62 * 8) {
+		transferred_bits = 62 * 8;
+	}
 
-  /* Fill the output buffer with zeroes */
-  if (!no_read)
-  {
-    memset(output_buffer, 0, (transferred_bits + 7) / 8);
-  }
+	/* Fill the output buffer with zeroes */
+	if (!no_read) {
+		memset(output_buffer, 0, (transferred_bits + 7) / 8);
+	}
 
-  jtag_transfer(transferred_bits, commands+2, output_buffer);
-  return (transferred_bits + 7) / 8;
+	jtag_transfer(transferred_bits, commands + 2, output_buffer);
+	return (transferred_bits + 7) / 8;
 }
 
 static void cmd_setsig(const uint8_t *commands) {
-  uint8_t signal_mask, signal_status;
+	uint8_t signal_mask, signal_status;
 
-  signal_mask = commands[1];
-  signal_status = commands[2];
+	signal_mask = commands[1];
+	signal_status = commands[2];
 
-  if (signal_mask & SIG_TCK) {
-    jtag_set_tck(signal_status & SIG_TCK);
-  }
+	if (signal_mask & SIG_TCK) {
+		jtag_set_tck(signal_status & SIG_TCK);
+	}
 
-  if (signal_mask & SIG_TDI) {
-    jtag_set_tdi(signal_status & SIG_TDI);
-  }
+	if (signal_mask & SIG_TDI) {
+		jtag_set_tdi(signal_status & SIG_TDI);
+	}
 
-  if (signal_mask & SIG_TMS) {
-    jtag_set_tms(signal_status & SIG_TMS);
-  }
+	if (signal_mask & SIG_TMS) {
+		jtag_set_tms(signal_status & SIG_TMS);
+	}
 
-  if (signal_mask & SIG_TRST) {
-    jtag_set_trst(signal_status & SIG_TRST);
-  }
+	if (signal_mask & SIG_TRST) {
+		jtag_set_trst(signal_status & SIG_TRST);
+	}
 
-  if (signal_mask & SIG_SRST) {
-    jtag_set_srst(signal_status & SIG_SRST);
-  }
+	if (signal_mask & SIG_SRST) {
+		jtag_set_srst(signal_status & SIG_SRST);
+	}
 }
 
 static uint32_t cmd_getsig(uint8_t *output_buffer) {
-  uint8_t signal_status = 0;
+	uint8_t signal_status = 0;
 
-  if (jtag_get_tdo()) {
-    signal_status |= SIG_TDO;
-  }
-  output_buffer[0] = signal_status;
-  return 1;
+	if (jtag_get_tdo()) {
+		signal_status |= SIG_TDO;
+	}
+	output_buffer[0] = signal_status;
+	return 1;
 }
 
 static uint32_t cmd_clk(const uint8_t *commands, bool readout, uint8_t *output_buffer) {
-  uint8_t signals, clk_pulses;
+	uint8_t signals, clk_pulses;
 
-  signals = commands[1];
-  clk_pulses = commands[2];
+	signals = commands[1];
+	clk_pulses = commands[2];
 
-  bool readout_val = jtag_strobe(clk_pulses, signals & SIG_TMS, signals & SIG_TDI);
+	bool readout_val = jtag_strobe(clk_pulses, signals & SIG_TMS, signals & SIG_TDI);
 
-  if (readout)
-  {
-    output_buffer[0] = readout_val ? 0xFF : 0;
-  }
-  return readout ? 1 : 0;
+	if (readout) {
+		output_buffer[0] = readout_val ? 0xFF : 0;
+	}
+	return readout ? 1 : 0;
 }

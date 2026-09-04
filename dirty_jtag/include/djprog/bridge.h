@@ -9,9 +9,9 @@
  * electrical transactions over the DirtyJTAG role pins, not vendor protocol
  * emulation. */
 enum dj_bridge_gpio_op {
-    DJ_BRIDGE_GPIO_READ  = 0,
-    DJ_BRIDGE_GPIO_WRITE = 1,
-    DJ_BRIDGE_GPIO_DIR   = 2,
+	DJ_BRIDGE_GPIO_READ = 0,
+	DJ_BRIDGE_GPIO_WRITE = 1,
+	DJ_BRIDGE_GPIO_DIR = 2,
 };
 
 int dj_bridge_info(uint8_t *out, size_t *len);

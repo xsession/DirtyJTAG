@@ -21,22 +21,22 @@
 
 #include <zephyr/kernel.h>
 
+#include "delay.h"
 #include "jtag.h"
 #include "usb.h"
-#include "delay.h"
 
 int main(void) {
-  delay_init();
-  usb_reenumerate();
-  jtag_init();
+	delay_init();
+	usb_reenumerate();
+	jtag_init();
 
-  if (usb_init() != 0) {
-    return 1;
-  }
+	if (usb_init() != 0) {
+		return 1;
+	}
 
-  while (1) {
-    k_sleep(K_FOREVER);
-  }
+	while (1) {
+		k_sleep(K_FOREVER);
+	}
 
-  return 0;
+	return 0;
 }

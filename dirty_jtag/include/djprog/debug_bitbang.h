@@ -9,6 +9,6 @@
  * currently-selected ARM SWD or generic JTAG backend.  The output contains
  * one ASCII '0'/'1' byte for every sample/read request in the input.
  */
-int dj_debug_remote_bitbang(const uint8_t *ops, size_t op_len,
-                            uint8_t *samples, size_t *sample_len);
+int dj_debug_remote_bitbang(const uint8_t *ops, size_t op_len, uint8_t *samples,
+                            size_t *sample_len);
 #endif

@@ -1,50 +1,42 @@
 /* SPDX-License-Identifier: MIT */
 #include "djprog/hw.h"
 #include "djprog/swim_phy.h"
+#include <errno.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
-#include <errno.h>
 
 #define DJ_PICO_NODE DT_ALIAS(dirtyjtag_pico)
 #define GPIO_PROP(role, prop) GPIO_DT_SPEC_GET(DJ_PICO_NODE, prop##_gpios)
 #define ADC_CHANNEL(prop) DT_PROP(DJ_PICO_NODE, prop##_adc_channel)
 
-BUILD_ASSERT(DT_NODE_HAS_STATUS(DJ_PICO_NODE, okay),
-             "rpi_pico overlay must define dirtyjtag-pico");
-BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, clk_gpios),
-             "dirtyjtag-pico must define clk-gpios");
-BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, data0_gpios),
-             "dirtyjtag-pico must define data0-gpios");
-BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, data1_gpios),
-             "dirtyjtag-pico must define data1-gpios");
-BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, data2_gpios),
-             "dirtyjtag-pico must define data2-gpios");
-BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, reset_gpios),
-             "dirtyjtag-pico must define reset-gpios");
-BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, aux_gpios),
-             "dirtyjtag-pico must define aux-gpios");
+BUILD_ASSERT(DT_NODE_HAS_STATUS(DJ_PICO_NODE, okay), "rpi_pico overlay must define dirtyjtag-pico");
+BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, clk_gpios), "dirtyjtag-pico must define clk-gpios");
+BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, data0_gpios), "dirtyjtag-pico must define data0-gpios");
+BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, data1_gpios), "dirtyjtag-pico must define data1-gpios");
+BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, data2_gpios), "dirtyjtag-pico must define data2-gpios");
+BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, reset_gpios), "dirtyjtag-pico must define reset-gpios");
+BUILD_ASSERT(DT_NODE_HAS_PROP(DJ_PICO_NODE, aux_gpios), "dirtyjtag-pico must define aux-gpios");
 
 /*
  * Raspberry Pi Pico universal-programmer front end.
  *
- * Target-side translators are SN74LVC1T45 devices. They have DIR but no OE,
- * so safe isolation is achieved by forcing B->A and making the Pico A pin an
- * input. RESET/MCLR is deliberately separate: GP6 drives an open-drain sink.
+ * Target-side translators are
+ * SN74LVC1T45 devices. They have DIR but no OE,
+ * so safe isolation is achieved by forcing B->A
+ * and making the Pico A pin an
+ * input. RESET/MCLR is deliberately separate: GP6 drives an
+ * open-drain sink.
  */
 static const struct device *gpio = DEVICE_DT_GET(DT_NODELABEL(gpio0));
-static const struct device *adc  = DEVICE_DT_GET(DT_NODELABEL(adc));
+static const struct device *adc = DEVICE_DT_GET(DT_NODELABEL(adc));
 static struct dj_pinmap map;
 
 static const struct gpio_dt_spec signal_gpio[DJ_PIN_COUNT] = {
-    GPIO_PROP(clk, clk),
-    GPIO_PROP(data0, data0),
-    GPIO_PROP(data1, data1),
-    GPIO_PROP(data2, data2),
-    GPIO_PROP(reset, reset),
-    GPIO_PROP(aux, aux),
+    GPIO_PROP(clk, clk),     GPIO_PROP(data0, data0), GPIO_PROP(data1, data1),
+    GPIO_PROP(data2, data2), GPIO_PROP(reset, reset), GPIO_PROP(aux, aux),
 };
 
 static const struct gpio_dt_spec dir_gpio[DJ_PIN_COUNT] = {
@@ -65,9 +57,9 @@ static const struct gpio_dt_spec tgt_fault_n = GPIO_PROP(tgt_fault_n, tgt_fault_
 static const struct gpio_dt_spec data0_iso_en = GPIO_PROP(data0_iso_en, data0_iso_en);
 static const struct gpio_dt_spec hv_data0_apply = GPIO_PROP(hv_data0_apply, hv_data0_apply);
 
-#define ADC_CH_VTARGET       ADC_CHANNEL(vtarget)
-#define ADC_CH_VPP           ADC_CHANNEL(vpp)
-#define ADC_CH_ITARGET       ADC_CHANNEL(itarget)
+#define ADC_CH_VTARGET ADC_CHANNEL(vtarget)
+#define ADC_CH_VPP ADC_CHANNEL(vpp)
+#define ADC_CH_ITARGET ADC_CHANNEL(itarget)
 
 static bool reset_asserted;
 static bool boost_on;
@@ -76,329 +68,379 @@ static bool hv_data0_on;
 static bool signal_latch[DJ_PIN_COUNT];
 static enum dj_power_mode power_mode;
 
-static int adc_setup_channel(uint8_t ch)
-{
-    struct adc_channel_cfg c = {
-        .gain = ADC_GAIN_1,
-        .reference = ADC_REF_INTERNAL,
-        .acquisition_time = ADC_ACQ_TIME_DEFAULT,
-        .channel_id = ch,
-    };
-    return adc_channel_setup(adc, &c);
+static int adc_setup_channel(uint8_t ch) {
+	struct adc_channel_cfg c = {
+	    .gain = ADC_GAIN_1,
+	    .reference = ADC_REF_INTERNAL,
+	    .acquisition_time = ADC_ACQ_TIME_DEFAULT,
+	    .channel_id = ch,
+	};
+	return adc_channel_setup(adc, &c);
 }
 
-static int init(void)
-{
-    if (!device_is_ready(gpio) || !device_is_ready(adc)) return -ENODEV;
-    for (int i = 0; i < DJ_PIN_COUNT; ++i) {
-        if (!gpio_is_ready_dt(&signal_gpio[i])) return -ENODEV;
-        map.gpio[i] = signal_gpio[i].pin;
-    }
-    for (int i = 0; i < DJ_PIN_COUNT; ++i) {
-        if (i == DJ_PIN_RESET) continue;
-        if (!gpio_is_ready_dt(&dir_gpio[i])) return -ENODEV;
-    }
-    if (!gpio_is_ready_dt(&tgt_reg_en) || !gpio_is_ready_dt(&tgt_vsel) ||
-        !gpio_is_ready_dt(&tgt_sw_en) || !gpio_is_ready_dt(&vpp_boost) ||
-        !gpio_is_ready_dt(&vpp_apply) || !gpio_is_ready_dt(&tgt_fault_n) ||
-        !gpio_is_ready_dt(&data0_iso_en) || !gpio_is_ready_dt(&hv_data0_apply)) {
-        return -ENODEV;
-    }
+static int init(void) {
+	if (!device_is_ready(gpio) || !device_is_ready(adc))
+		return -ENODEV;
+	for (int i = 0; i < DJ_PIN_COUNT; ++i) {
+		if (!gpio_is_ready_dt(&signal_gpio[i]))
+			return -ENODEV;
+		map.gpio[i] = signal_gpio[i].pin;
+	}
+	for (int i = 0; i < DJ_PIN_COUNT; ++i) {
+		if (i == DJ_PIN_RESET)
+			continue;
+		if (!gpio_is_ready_dt(&dir_gpio[i]))
+			return -ENODEV;
+	}
+	if (!gpio_is_ready_dt(&tgt_reg_en) || !gpio_is_ready_dt(&tgt_vsel) ||
+	    !gpio_is_ready_dt(&tgt_sw_en) || !gpio_is_ready_dt(&vpp_boost) ||
+	    !gpio_is_ready_dt(&vpp_apply) || !gpio_is_ready_dt(&tgt_fault_n) ||
+	    !gpio_is_ready_dt(&data0_iso_en) || !gpio_is_ready_dt(&hv_data0_apply)) {
+		return -ENODEV;
+	}
 
-    /* Target signal A-side pins start high-Z. */
-    for (int i = 0; i < DJ_PIN_COUNT; ++i) {
-        if (i == DJ_PIN_RESET) continue;
-        int r = gpio_pin_configure_dt(&signal_gpio[i], GPIO_INPUT);
-        if (r) return r;
-    }
+	/* Target signal A-side pins start high-Z. */
+	for (int i = 0; i < DJ_PIN_COUNT; ++i) {
+		if (i == DJ_PIN_RESET)
+			continue;
+		int r = gpio_pin_configure_dt(&signal_gpio[i], GPIO_INPUT);
+		if (r)
+			return r;
+	}
 
-    /* RESET sink gate low means released. */
-    int r = gpio_pin_configure_dt(&signal_gpio[DJ_PIN_RESET], GPIO_OUTPUT_INACTIVE);
-    if (r) return r;
+	/* RESET sink gate low means released. */
+	int r = gpio_pin_configure_dt(&signal_gpio[DJ_PIN_RESET], GPIO_OUTPUT_INACTIVE);
+	if (r)
+		return r;
 
-    /* All translators face target->Pico in idle state. */
-    for (int i = 0; i < DJ_PIN_COUNT; ++i) {
-        if (i == DJ_PIN_RESET) continue;
-        r = gpio_pin_configure_dt(&dir_gpio[i], GPIO_OUTPUT_INACTIVE);
-        if (r) return r;
-    }
+	/* All translators face target->Pico in idle state. */
+	for (int i = 0; i < DJ_PIN_COUNT; ++i) {
+		if (i == DJ_PIN_RESET)
+			continue;
+		r = gpio_pin_configure_dt(&dir_gpio[i], GPIO_OUTPUT_INACTIVE);
+		if (r)
+			return r;
+	}
 
-    const struct gpio_dt_spec *outputs[] = {
-        &tgt_reg_en, &tgt_vsel, &tgt_sw_en,
-        &vpp_boost, &vpp_apply, &data0_iso_en, &hv_data0_apply,
-    };
-    for (size_t i = 0; i < sizeof(outputs) / sizeof(outputs[0]); ++i) {
-        r = gpio_pin_configure_dt(outputs[i], GPIO_OUTPUT_INACTIVE);
-        if (r) return r;
-    }
-    r = gpio_pin_configure_dt(&tgt_fault_n, GPIO_INPUT | GPIO_PULL_UP);
-    if (r) return r;
+	const struct gpio_dt_spec *outputs[] = {
+	    &tgt_reg_en, &tgt_vsel, &tgt_sw_en, &vpp_boost, &vpp_apply, &data0_iso_en, &hv_data0_apply,
+	};
+	for (size_t i = 0; i < sizeof(outputs) / sizeof(outputs[0]); ++i) {
+		r = gpio_pin_configure_dt(outputs[i], GPIO_OUTPUT_INACTIVE);
+		if (r)
+			return r;
+	}
+	r = gpio_pin_configure_dt(&tgt_fault_n, GPIO_INPUT | GPIO_PULL_UP);
+	if (r)
+		return r;
 
-    for (uint8_t ch = ADC_CH_VTARGET; ch <= ADC_CH_ITARGET; ++ch) {
-        r = adc_setup_channel(ch);
-        if (r) return r;
-    }
+	for (uint8_t ch = ADC_CH_VTARGET; ch <= ADC_CH_ITARGET; ++ch) {
+		r = adc_setup_channel(ch);
+		if (r)
+			return r;
+	}
 
-    reset_asserted = false;
-    boost_on = false;
-    vpp_on = false;
-    hv_data0_on = false;
-    gpio_pin_set_dt(&data0_iso_en, 0);
-    power_mode = DJ_PWR_OFF;
-    return 0;
+	reset_asserted = false;
+	boost_on = false;
+	vpp_on = false;
+	hv_data0_on = false;
+	gpio_pin_set_dt(&data0_iso_en, 0);
+	power_mode = DJ_PWR_OFF;
+	return 0;
 }
 
-static int configure(const struct dj_pinmap *m)
-{
-    if (!m) return -EINVAL;
-    for (int i = 0; i < DJ_PIN_COUNT; ++i) if (m->gpio[i] > 28) return -ERANGE;
-    map = *m;
-    return 0;
+static int configure(const struct dj_pinmap *m) {
+	if (!m)
+		return -EINVAL;
+	for (int i = 0; i < DJ_PIN_COUNT; ++i)
+		if (m->gpio[i] > 28)
+			return -ERANGE;
+	map = *m;
+	return 0;
 }
 
-static int dir(enum dj_pin_role role, enum dj_dir d)
-{
-    if (role >= DJ_PIN_COUNT) return -EINVAL;
-    if (role == DJ_PIN_RESET) return 0;
-    if (role == DJ_PIN_DATA0 && !hv_data0_on) gpio_pin_set_dt(&data0_iso_en, 1);
+static int dir(enum dj_pin_role role, enum dj_dir d) {
+	if (role >= DJ_PIN_COUNT)
+		return -EINVAL;
+	if (role == DJ_PIN_RESET)
+		return 0;
+	if (role == DJ_PIN_DATA0 && !hv_data0_on)
+		gpio_pin_set_dt(&data0_iso_en, 1);
 
-    uint8_t p = map.gpio[role];
-    if (d == DJ_DIR_INPUT || d == DJ_DIR_RELEASE) {
-        /* Remove target drive first, then make Pico input. */
-        int r = gpio_pin_set_dt(&dir_gpio[role], 0);
-        if (r) return r;
-        return gpio_pin_configure(gpio, p, GPIO_INPUT);
-    }
+	uint8_t p = map.gpio[role];
+	if (d == DJ_DIR_INPUT || d == DJ_DIR_RELEASE) {
+		/* Remove target drive first, then make Pico input. */
+		int r = gpio_pin_set_dt(&dir_gpio[role], 0);
+		if (r)
+			return r;
+		return gpio_pin_configure(gpio, p, GPIO_INPUT);
+	}
 
-    if (d == DJ_DIR_OD_LOW) {
-        /* Open-drain low emulation through the unidirectional translator: drive
-         * a low only for the active pulse, then callers release with INPUT.
-         * External/front-end pull-up returns the SWIM/UPDI line high. */
-        signal_latch[role] = false;
-        int r = gpio_pin_configure(gpio, p, GPIO_OUTPUT_INACTIVE);
-        if (r) return r;
-        return gpio_pin_set_dt(&dir_gpio[role], 1);
-    }
+	if (d == DJ_DIR_OD_LOW) {
+		/* Open-drain low emulation through the unidirectional translator: drive
+		 * a low only for the active pulse, then callers release with INPUT.
+		 * External/front-end pull-up returns the SWIM/UPDI line high. */
+		signal_latch[role] = false;
+		int r = gpio_pin_configure(gpio, p, GPIO_OUTPUT_INACTIVE);
+		if (r)
+			return r;
+		return gpio_pin_set_dt(&dir_gpio[role], 1);
+	}
 
-    /* Preload A-side value before enabling A->B to avoid a direction glitch. */
-    int r = gpio_pin_configure(gpio, p,
-        signal_latch[role] ? GPIO_OUTPUT_ACTIVE : GPIO_OUTPUT_INACTIVE);
-    if (r) return r;
-    return gpio_pin_set_dt(&dir_gpio[role], 1);
+	/* Preload A-side value before enabling A->B to avoid a direction glitch. */
+	int r =
+	    gpio_pin_configure(gpio, p, signal_latch[role] ? GPIO_OUTPUT_ACTIVE : GPIO_OUTPUT_INACTIVE);
+	if (r)
+		return r;
+	return gpio_pin_set_dt(&dir_gpio[role], 1);
 }
 
-static int wr(enum dj_pin_role role, bool value)
-{
-    if (role >= DJ_PIN_COUNT) return -EINVAL;
-    if (role == DJ_PIN_RESET) {
-        /* API true=released, false=asserted; QRESET gate is active high. */
-        reset_asserted = !value;
-        return gpio_pin_set(gpio, map.gpio[role], reset_asserted ? 1 : 0);
-    }
-    signal_latch[role] = value;
-    return gpio_pin_set(gpio, map.gpio[role], value ? 1 : 0);
+static int wr(enum dj_pin_role role, bool value) {
+	if (role >= DJ_PIN_COUNT)
+		return -EINVAL;
+	if (role == DJ_PIN_RESET) {
+		/* API true=released, false=asserted; QRESET gate is active high. */
+		reset_asserted = !value;
+		return gpio_pin_set(gpio, map.gpio[role], reset_asserted ? 1 : 0);
+	}
+	signal_latch[role] = value;
+	return gpio_pin_set(gpio, map.gpio[role], value ? 1 : 0);
 }
 
-static int rd(enum dj_pin_role role, bool *value)
-{
-    if (role >= DJ_PIN_COUNT || !value) return -EINVAL;
-    if (role == DJ_PIN_RESET) {
-        *value = !reset_asserted;
-        return 0;
-    }
-    int x = gpio_pin_get(gpio, map.gpio[role]);
-    if (x < 0) return x;
-    *value = x != 0;
-    return 0;
+static int rd(enum dj_pin_role role, bool *value) {
+	if (role >= DJ_PIN_COUNT || !value)
+		return -EINVAL;
+	if (role == DJ_PIN_RESET) {
+		*value = !reset_asserted;
+		return 0;
+	}
+	int x = gpio_pin_get(gpio, map.gpio[role]);
+	if (x < 0)
+		return x;
+	*value = x != 0;
+	return 0;
 }
 
-static int clkbits(enum dj_pin_role c, enum dj_pin_role o, enum dj_pin_role in,
-                   const uint8_t *tx, uint8_t *rx, size_t bits, bool lsb,
-                   uint32_t hz)
-{
-    if (!hz) return -EINVAL;
-    uint32_t half = 500000u / hz;
-    if (!half) half = 1;
-    if (rx) for (size_t i = 0; i < (bits + 7u) / 8u; ++i) rx[i] = 0;
+static int clkbits(enum dj_pin_role c, enum dj_pin_role o, enum dj_pin_role in, const uint8_t *tx,
+                   uint8_t *rx, size_t bits, bool lsb, uint32_t hz) {
+	if (!hz)
+		return -EINVAL;
+	uint32_t half = 500000u / hz;
+	if (!half)
+		half = 1;
+	if (rx)
+		for (size_t i = 0; i < (bits + 7u) / 8u; ++i)
+			rx[i] = 0;
 
-    int r = dir(c, DJ_DIR_OUTPUT); if (r) return r;
-    if (tx) { r = dir(o, DJ_DIR_OUTPUT); if (r) return r; }
-    if (rx) { r = dir(in, DJ_DIR_INPUT); if (r) return r; }
+	int r = dir(c, DJ_DIR_OUTPUT);
+	if (r)
+		return r;
+	if (tx) {
+		r = dir(o, DJ_DIR_OUTPUT);
+		if (r)
+			return r;
+	}
+	if (rx) {
+		r = dir(in, DJ_DIR_INPUT);
+		if (r)
+			return r;
+	}
 
-    for (size_t i = 0; i < bits; ++i) {
-        size_t bi = i / 8u;
-        unsigned bj = (unsigned)(i & 7u), idx = lsb ? bj : 7u - bj;
-        if ((r = wr(c, false))) return r;
-        if (tx && (r = wr(o, ((tx[bi] >> idx) & 1u) != 0))) return r;
-        k_busy_wait(half);
-        if ((r = wr(c, true))) return r;
-        if (rx) {
-            bool b = false;
-            if ((r = rd(in, &b))) return r;
-            if (b) rx[bi] |= (uint8_t)(1u << idx);
-        }
-        k_busy_wait(half);
-    }
-    return wr(c, false);
+	for (size_t i = 0; i < bits; ++i) {
+		size_t bi = i / 8u;
+		unsigned bj = (unsigned)(i & 7u), idx = lsb ? bj : 7u - bj;
+		if ((r = wr(c, false)))
+			return r;
+		if (tx && (r = wr(o, ((tx[bi] >> idx) & 1u) != 0)))
+			return r;
+		k_busy_wait(half);
+		if ((r = wr(c, true)))
+			return r;
+		if (rx) {
+			bool b = false;
+			if ((r = rd(in, &b)))
+				return r;
+			if (b)
+				rx[bi] |= (uint8_t)(1u << idx);
+		}
+		k_busy_wait(half);
+	}
+	return wr(c, false);
 }
 
-static uint32_t adc_reference_mv(void)
-{
-    uint16_t mv = adc_ref_internal(adc);
-    return mv ? mv : 3300u;
+static uint32_t adc_reference_mv(void) {
+	uint16_t mv = adc_ref_internal(adc);
+	return mv ? mv : 3300u;
 }
 
-static int adc_pin_mv(uint8_t ch, uint32_t *out)
-{
-    if (!out) return -EINVAL;
-    int16_t raw = 0;
-    struct adc_sequence s = {
-        .channels = BIT(ch),
-        .buffer = &raw,
-        .buffer_size = sizeof(raw),
-        .resolution = 12,
-    };
-    int r = adc_read(adc, &s);
-    if (r) return r;
-    if (raw < 0) raw = 0;
-    uint64_t mv = (uint64_t)(uint16_t)raw * adc_reference_mv();
-    mv /= 4095u;
-    *out = (uint32_t)mv;
-    return 0;
+static int adc_pin_mv(uint8_t ch, uint32_t *out) {
+	if (!out)
+		return -EINVAL;
+	int16_t raw = 0;
+	struct adc_sequence s = {
+	    .channels = BIT(ch),
+	    .buffer = &raw,
+	    .buffer_size = sizeof(raw),
+	    .resolution = 12,
+	};
+	int r = adc_read(adc, &s);
+	if (r)
+		return r;
+	if (raw < 0)
+		raw = 0;
+	uint64_t mv = (uint64_t)(uint16_t)raw * adc_reference_mv();
+	mv /= 4095u;
+	*out = (uint32_t)mv;
+	return 0;
 }
 
-static int measure(struct dj_measurement *m)
-{
-    if (!m) return -EINVAL;
-    uint32_t mv = 0;
-    int r = adc_pin_mv(ADC_CH_VTARGET, &mv);
-    if (r) return r;
-    m->vtarget_mv = mv * 2u;
+static int measure(struct dj_measurement *m) {
+	if (!m)
+		return -EINVAL;
+	uint32_t mv = 0;
+	int r = adc_pin_mv(ADC_CH_VTARGET, &mv);
+	if (r)
+		return r;
+	m->vtarget_mv = mv * 2u;
 
-    r = adc_pin_mv(ADC_CH_VPP, &mv);
-    if (r) return r;
-    m->vpp_mv = (mv * 43u + 5u) / 10u;
+	r = adc_pin_mv(ADC_CH_VPP, &mv);
+	if (r)
+		return r;
+	m->vpp_mv = (mv * 43u + 5u) / 10u;
 
-    r = adc_pin_mv(ADC_CH_ITARGET, &mv);
-    if (r) return r;
-    /* 0.1 ohm * INA180A2 gain 50 => 5 mV/mA. */
-    m->itarget_ma = (mv + 2u) / 5u;
+	r = adc_pin_mv(ADC_CH_ITARGET, &mv);
+	if (r)
+		return r;
+	/* 0.1 ohm * INA180A2 gain 50 => 5 mV/mA. */
+	m->itarget_ma = (mv + 2u) / 5u;
 
-    int fault = gpio_pin_get_dt(&tgt_fault_n);
-    if (fault < 0) return fault;
-    m->power_fault = fault != 0;
-    return 0;
+	int fault = gpio_pin_get_dt(&tgt_fault_n);
+	if (fault < 0)
+		return fault;
+	m->power_fault = fault != 0;
+	return 0;
 }
 
-static void local_power_off(void)
-{
-    gpio_pin_set_dt(&tgt_sw_en, 0);
-    k_sleep(K_MSEC(1));
-    gpio_pin_set_dt(&tgt_reg_en, 0);
+static void local_power_off(void) {
+	gpio_pin_set_dt(&tgt_sw_en, 0);
+	k_sleep(K_MSEC(1));
+	gpio_pin_set_dt(&tgt_reg_en, 0);
 }
 
-static int power(enum dj_power_mode m)
-{
-    if (m < DJ_PWR_OFF || m > DJ_PWR_5V) return -EINVAL;
-    if (vpp_on) return -EBUSY;
+static int power(enum dj_power_mode m) {
+	if (m < DJ_PWR_OFF || m > DJ_PWR_5V)
+		return -EINVAL;
+	if (vpp_on)
+		return -EBUSY;
 
-    local_power_off();
-    power_mode = DJ_PWR_OFF;
-    k_sleep(K_MSEC(2));
+	local_power_off();
+	power_mode = DJ_PWR_OFF;
+	k_sleep(K_MSEC(2));
 
-    if (m == DJ_PWR_OFF || m == DJ_PWR_EXTERNAL) {
-        power_mode = m;
-        return 0;
-    }
+	if (m == DJ_PWR_OFF || m == DJ_PWR_EXTERNAL) {
+		power_mode = m;
+		return 0;
+	}
 
-    gpio_pin_set_dt(&tgt_vsel, m == DJ_PWR_5V ? 1 : 0);
-    gpio_pin_set_dt(&tgt_reg_en, 1);
-    k_sleep(K_MSEC(3));
-    gpio_pin_set_dt(&tgt_sw_en, 1);
-    k_sleep(K_MSEC(3));
+	gpio_pin_set_dt(&tgt_vsel, m == DJ_PWR_5V ? 1 : 0);
+	gpio_pin_set_dt(&tgt_reg_en, 1);
+	k_sleep(K_MSEC(3));
+	gpio_pin_set_dt(&tgt_sw_en, 1);
+	k_sleep(K_MSEC(3));
 
-    struct dj_measurement x = {0};
-    int r = measure(&x);
-    uint32_t lo = m == DJ_PWR_3V3 ? 3000u : 4500u;
-    uint32_t hi = m == DJ_PWR_3V3 ? 3650u : 5300u;
-    if (r || x.power_fault || x.vtarget_mv < lo || x.vtarget_mv > hi) {
-        local_power_off();
-        return r ? r : (x.power_fault ? -EIO : -ERANGE);
-    }
-    power_mode = m;
-    return 0;
+	struct dj_measurement x = {0};
+	int r = measure(&x);
+	uint32_t lo = m == DJ_PWR_3V3 ? 3000u : 4500u;
+	uint32_t hi = m == DJ_PWR_3V3 ? 3650u : 5300u;
+	if (r || x.power_fault || x.vtarget_mv < lo || x.vtarget_mv > hi) {
+		local_power_off();
+		return r ? r : (x.power_fault ? -EIO : -ERANGE);
+	}
+	power_mode = m;
+	return 0;
 }
 
-static int vboost(bool on)
-{
-    if (!on && hv_data0_on) {
-        gpio_pin_set_dt(&hv_data0_apply, 0);
-        hv_data0_on = false;
-    }
-    if (!on && vpp_on) {
-        gpio_pin_set_dt(&vpp_apply, 0);
-        vpp_on = false;
-    }
-    boost_on = on;
-    gpio_pin_set_dt(&vpp_boost, on ? 1 : 0);
-    if (on) k_sleep(K_MSEC(5));
-    return 0;
+static int vboost(bool on) {
+	if (!on && hv_data0_on) {
+		gpio_pin_set_dt(&hv_data0_apply, 0);
+		hv_data0_on = false;
+	}
+	if (!on && vpp_on) {
+		gpio_pin_set_dt(&vpp_apply, 0);
+		vpp_on = false;
+	}
+	boost_on = on;
+	gpio_pin_set_dt(&vpp_boost, on ? 1 : 0);
+	if (on)
+		k_sleep(K_MSEC(5));
+	return 0;
 }
 
-static int vapply(bool on)
-{
-    if (on) {
-        if (!boost_on) return -EPERM;
-        if (reset_asserted || hv_data0_on) return -EBUSY;
-        struct dj_measurement m = {0};
-        int r = measure(&m);
-        if (r) return r;
-        if (m.power_fault) return -EIO;
-        if (m.vpp_mv < 10500u || m.vpp_mv > 13500u) return -ERANGE;
-    }
-    vpp_on = on;
-    return gpio_pin_set_dt(&vpp_apply, on ? 1 : 0);
+static int vapply(bool on) {
+	if (on) {
+		if (!boost_on)
+			return -EPERM;
+		if (reset_asserted || hv_data0_on)
+			return -EBUSY;
+		struct dj_measurement m = {0};
+		int r = measure(&m);
+		if (r)
+			return r;
+		if (m.power_fault)
+			return -EIO;
+		if (m.vpp_mv < 10500u || m.vpp_mv > 13500u)
+			return -ERANGE;
+	}
+	vpp_on = on;
+	return gpio_pin_set_dt(&vpp_apply, on ? 1 : 0);
 }
 
-static int hvdata0(bool on)
-{
-    if (on) {
-        if (!boost_on) return -EPERM;
-        if (vpp_on) return -EBUSY;
-        struct dj_measurement m = {0};
-        int r = measure(&m);
-        if (r) return r;
-        if (m.power_fault) return -EIO;
-        /* Hardware is intentionally designed for an ~11.8 V shared VPP rail. */
-        if (m.vpp_mv < 10500u || m.vpp_mv > 12000u) return -ERANGE;
-        /* Disconnect 5.5 V translator before applying HV to target DATA0. */
-        gpio_pin_set_dt(&data0_iso_en, 0);
-        gpio_pin_set_dt(&dir_gpio[DJ_PIN_DATA0], 0);
-        gpio_pin_configure(gpio, map.gpio[DJ_PIN_DATA0], GPIO_INPUT);
-        k_busy_wait(10);
-    }
-    hv_data0_on = on;
-    int r = gpio_pin_set_dt(&hv_data0_apply, on ? 1 : 0);
-    if (!on) k_busy_wait(10);
-    return r;
+static int hvdata0(bool on) {
+	if (on) {
+		if (!boost_on)
+			return -EPERM;
+		if (vpp_on)
+			return -EBUSY;
+		struct dj_measurement m = {0};
+		int r = measure(&m);
+		if (r)
+			return r;
+		if (m.power_fault)
+			return -EIO;
+		/* Hardware is intentionally designed for an ~11.8 V shared VPP rail. */
+		if (m.vpp_mv < 10500u || m.vpp_mv > 12000u)
+			return -ERANGE;
+		/* Disconnect 5.5 V translator before applying HV to target DATA0. */
+		gpio_pin_set_dt(&data0_iso_en, 0);
+		gpio_pin_set_dt(&dir_gpio[DJ_PIN_DATA0], 0);
+		gpio_pin_configure(gpio, map.gpio[DJ_PIN_DATA0], GPIO_INPUT);
+		k_busy_wait(10);
+	}
+	hv_data0_on = on;
+	int r = gpio_pin_set_dt(&hv_data0_apply, on ? 1 : 0);
+	if (!on)
+		k_busy_wait(10);
+	return r;
 }
 
-static void delay(uint32_t us) { k_busy_wait(us); }
+static void delay(uint32_t us) {
+	k_busy_wait(us);
+}
 
-static const struct dj_hw_ops ops = {
-    init, configure, dir, wr, rd, clkbits, power, vboost, vapply, hvdata0, measure, delay
-};
+static const struct dj_hw_ops ops = {init,  configure, dir,    wr,      rd,      clkbits,
+                                     power, vboost,    vapply, hvdata0, measure, delay};
 
-int dj_rpi_pico_hal_init(void)
-{
-    int r = ops.init();
-    if (r) return r;
-    dj_hw_bind(&ops);
-    int r2 = dj_hw_set_pinmap(&map);
+int dj_rpi_pico_hal_init(void) {
+	int r = ops.init();
+	if (r)
+		return r;
+	dj_hw_bind(&ops);
+	int r2 = dj_hw_set_pinmap(&map);
 #if defined(CONFIG_DJPROG_SWIM_RP2040_PIO)
-    if (!r2) {
-        (void)dj_swim_rp2040_pio_try_bind(map.gpio[DJ_PIN_DATA0], CONFIG_DJPROG_SWIM_PIO_DEFAULT_HZ);
-    }
+	if (!r2) {
+		(void)dj_swim_rp2040_pio_try_bind(map.gpio[DJ_PIN_DATA0],
+		                                  CONFIG_DJPROG_SWIM_PIO_DEFAULT_HZ);
+	}
 #endif
-    return r2;
+	return r2;
 }

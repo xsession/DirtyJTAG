@@ -39,11 +39,9 @@
 #define CONFIG_DIRTYJTAG_LEGACY_UART_RX_IDLE_MS 2
 #endif
 
-static const struct device *const dirtyjtag_uart =
-	DEVICE_DT_GET(DIRTYJTAG_UART_NODE);
+static const struct device *const dirtyjtag_uart = DEVICE_DT_GET(DIRTYJTAG_UART_NODE);
 
-static void dirtyjtag_uart_worker(void *a, void *b, void *c)
-{
+static void dirtyjtag_uart_worker(void *a, void *b, void *c) {
 	uint8_t rx_buffer[DIRTYJTAG_USB_BUFFER_SIZE];
 	size_t rx_len = 0;
 	int64_t last_rx_ms = 0;
@@ -62,11 +60,10 @@ static void dirtyjtag_uart_worker(void *a, void *b, void *c)
 			last_rx_ms = k_uptime_get();
 		} else {
 			if (rx_len > 0 &&
-			    k_uptime_get() - last_rx_ms >=
-				    CONFIG_DIRTYJTAG_LEGACY_UART_RX_IDLE_MS) {
+			    k_uptime_get() - last_rx_ms >= CONFIG_DIRTYJTAG_LEGACY_UART_RX_IDLE_MS) {
 				const struct dirtyjtag_usb_transfer transfer = {
-					.buffer = rx_buffer,
-					.transferred = rx_len,
+				    .buffer = rx_buffer,
+				    .transferred = rx_len,
 				};
 
 				(void)cmd_handle(&transfer);
@@ -77,8 +74,8 @@ static void dirtyjtag_uart_worker(void *a, void *b, void *c)
 
 		if (rx_len == sizeof(rx_buffer)) {
 			const struct dirtyjtag_usb_transfer transfer = {
-				.buffer = rx_buffer,
-				.transferred = rx_len,
+			    .buffer = rx_buffer,
+			    .transferred = rx_len,
 			};
 
 			(void)cmd_handle(&transfer);
@@ -87,26 +84,20 @@ static void dirtyjtag_uart_worker(void *a, void *b, void *c)
 	}
 }
 
-K_THREAD_DEFINE(dirtyjtag_uart_thread, DIRTYJTAG_UART_STACK_SIZE,
-		dirtyjtag_uart_worker, NULL, NULL, NULL,
-		DIRTYJTAG_UART_PRIORITY, 0, 0);
+K_THREAD_DEFINE(dirtyjtag_uart_thread, DIRTYJTAG_UART_STACK_SIZE, dirtyjtag_uart_worker, NULL, NULL,
+                NULL, DIRTYJTAG_UART_PRIORITY, 0, 0);
 
-void usb_read_serial(void)
-{
-}
+void usb_read_serial(void) {}
 
-int usb_init(void)
-{
+int usb_init(void) {
 	return device_is_ready(dirtyjtag_uart) ? 0 : -ENODEV;
 }
 
-void usb_reenumerate(void)
-{
+void usb_reenumerate(void) {
 	delay_us(20000);
 }
 
-void usb_send(uint8_t *sent_buffer, uint8_t sent_size)
-{
+void usb_send(uint8_t *sent_buffer, uint8_t sent_size) {
 	for (uint8_t i = 0; i < sent_size; ++i) {
 		uart_poll_out(dirtyjtag_uart, sent_buffer[i]);
 	}

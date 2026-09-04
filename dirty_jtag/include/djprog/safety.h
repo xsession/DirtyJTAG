@@ -4,21 +4,23 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define DJ_SAFETY_ERASE   (1u << 0)
-#define DJ_SAFETY_WRITE   (1u << 1)
-#define DJ_SAFETY_VPP     (1u << 2)
-#define DJ_SAFETY_SCRIPT  (1u << 3)
-#define DJ_SAFETY_BRIDGE  (1u << 4)
-#define DJ_SAFETY_POWER   (1u << 5)
-#define DJ_SAFETY_DEBUG   (1u << 6)
-#define DJ_SAFETY_ALL     (DJ_SAFETY_ERASE|DJ_SAFETY_WRITE|DJ_SAFETY_VPP|DJ_SAFETY_SCRIPT|DJ_SAFETY_BRIDGE|DJ_SAFETY_POWER|DJ_SAFETY_DEBUG)
+#define DJ_SAFETY_ERASE (1u << 0)
+#define DJ_SAFETY_WRITE (1u << 1)
+#define DJ_SAFETY_VPP (1u << 2)
+#define DJ_SAFETY_SCRIPT (1u << 3)
+#define DJ_SAFETY_BRIDGE (1u << 4)
+#define DJ_SAFETY_POWER (1u << 5)
+#define DJ_SAFETY_DEBUG (1u << 6)
+#define DJ_SAFETY_ALL                                                                              \
+	(DJ_SAFETY_ERASE | DJ_SAFETY_WRITE | DJ_SAFETY_VPP | DJ_SAFETY_SCRIPT | DJ_SAFETY_BRIDGE |     \
+	 DJ_SAFETY_POWER | DJ_SAFETY_DEBUG)
 
 #define DJ_SAFETY_CONFIRM_PHRASE "I understand this can damage hardware"
 #define DJ_SAFETY_MAX_USES 1000000u
 
 struct dj_safety_state {
-    uint32_t armed_flags;
-    uint32_t remaining_uses;
+	uint32_t armed_flags;
+	uint32_t remaining_uses;
 };
 
 void dj_safety_reset(void);

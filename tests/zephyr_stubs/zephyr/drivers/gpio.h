@@ -7,8 +7,13 @@
 #define GPIO_OUTPUT_INACTIVE 2
 #define GPIO_OUTPUT_ACTIVE 4
 #define GPIO_PULL_UP 8
-struct gpio_dt_spec { const struct device *port; uint8_t pin; int dt_flags; };
-#define GPIO_DT_SPEC_GET(node, prop) { DEVICE_DT_GET(gpio0), GPIO_STUB_PIN(prop), 0 }
+struct gpio_dt_spec {
+	const struct device *port;
+	uint8_t pin;
+	int dt_flags;
+};
+#define GPIO_DT_SPEC_GET(node, prop)                                                               \
+	{ DEVICE_DT_GET(gpio0), GPIO_STUB_PIN(prop), 0 }
 #define GPIO_STUB_PIN(prop) GPIO_STUB_PIN_RESOLVE(prop)
 #define GPIO_STUB_PIN_RESOLVE(prop) GPIO_STUB_PIN_##prop
 #define GPIO_STUB_PIN_clk_gpios 2
@@ -30,11 +35,34 @@ struct gpio_dt_spec { const struct device *port; uint8_t pin; int dt_flags; };
 #define GPIO_STUB_PIN_tgt_fault_n_gpios 18
 #define GPIO_STUB_PIN_data0_iso_en_gpios 19
 #define GPIO_STUB_PIN_hv_data0_apply_gpios 20
-static inline int gpio_pin_configure(const struct device*d,uint8_t p,int f){(void)d;(void)p;(void)f;return 0;}
-static inline int gpio_pin_set(const struct device*d,uint8_t p,int v){(void)d;(void)p;(void)v;return 0;}
-static inline int gpio_pin_get(const struct device*d,uint8_t p){(void)d;(void)p;return 1;}
-static inline int gpio_is_ready_dt(const struct gpio_dt_spec*s){(void)s;return 1;}
-static inline int gpio_pin_configure_dt(const struct gpio_dt_spec*s,int f){return gpio_pin_configure(s->port,s->pin,f);}
-static inline int gpio_pin_set_dt(const struct gpio_dt_spec*s,int v){return gpio_pin_set(s->port,s->pin,v);}
-static inline int gpio_pin_get_dt(const struct gpio_dt_spec*s){return gpio_pin_get(s->port,s->pin);}
+static inline int gpio_pin_configure(const struct device *d, uint8_t p, int f) {
+	(void)d;
+	(void)p;
+	(void)f;
+	return 0;
+}
+static inline int gpio_pin_set(const struct device *d, uint8_t p, int v) {
+	(void)d;
+	(void)p;
+	(void)v;
+	return 0;
+}
+static inline int gpio_pin_get(const struct device *d, uint8_t p) {
+	(void)d;
+	(void)p;
+	return 1;
+}
+static inline int gpio_is_ready_dt(const struct gpio_dt_spec *s) {
+	(void)s;
+	return 1;
+}
+static inline int gpio_pin_configure_dt(const struct gpio_dt_spec *s, int f) {
+	return gpio_pin_configure(s->port, s->pin, f);
+}
+static inline int gpio_pin_set_dt(const struct gpio_dt_spec *s, int v) {
+	return gpio_pin_set(s->port, s->pin, v);
+}
+static inline int gpio_pin_get_dt(const struct gpio_dt_spec *s) {
+	return gpio_pin_get(s->port, s->pin);
+}
 #endif

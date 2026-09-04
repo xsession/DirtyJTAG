@@ -14,14 +14,14 @@
  * later timer/DMA implementation.
  */
 struct dj_swim_phy_ops {
-    const char *name;
-    bool (*available)(void);
-    int (*select)(uint32_t requested_hz);
-    int (*enter)(void);
-    int (*leave)(void);
-    int (*send_packet)(uint32_t value, unsigned bits); /* bits: 3 or 8 */
-    int (*recv_packet)(uint8_t *value);                /* 8-bit data packet */
-    int (*set_speed)(bool high_speed, uint32_t hz);
+	const char *name;
+	bool (*available)(void);
+	int (*select)(uint32_t requested_hz);
+	int (*enter)(void);
+	int (*leave)(void);
+	int (*send_packet)(uint32_t value, unsigned bits); /* bits: 3 or 8 */
+	int (*recv_packet)(uint8_t *value);                /* 8-bit data packet */
+	int (*set_speed)(bool high_speed, uint32_t hz);
 };
 
 int dj_swim_phy_register(const struct dj_swim_phy_ops *ops);

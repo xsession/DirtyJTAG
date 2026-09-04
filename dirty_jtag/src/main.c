@@ -15,8 +15,7 @@ static uint8_t output_buffer[DJP2_HDR_SIZE + DJP2_MAX_PAYLOAD];
 static struct djp2_frame request;
 static struct djp2_frame response;
 
-static uint8_t read_byte(void)
-{
+static uint8_t read_byte(void) {
 	uint8_t value;
 
 	while (uart_poll_in(cdc, &value) != 0) {
@@ -26,15 +25,13 @@ static uint8_t read_byte(void)
 	return value;
 }
 
-static void write_bytes(const uint8_t *data, size_t length)
-{
+static void write_bytes(const uint8_t *data, size_t length) {
 	for (size_t i = 0; i < length; ++i) {
 		uart_poll_out(cdc, data[i]);
 	}
 }
 
-static void wait_for_host(void)
-{
+static void wait_for_host(void) {
 	uint32_t dtr = 0;
 
 	while (dtr == 0U) {
@@ -43,8 +40,7 @@ static void wait_for_host(void)
 	}
 }
 
-static void read_frame(void)
-{
+static void read_frame(void) {
 	uint32_t window = 0;
 
 	/* Scan for the magic so a truncated or noisy frame does not desync USB. */
@@ -61,8 +57,7 @@ static void read_frame(void)
 	}
 }
 
-int main(void)
-{
+int main(void) {
 	if (dj_rpi_pico_hal_init() != 0) {
 		return 0;
 	}
@@ -75,10 +70,9 @@ int main(void)
 
 	for (;;) {
 		read_frame();
-		uint32_t payload_length = (uint32_t)input_buffer[14] |
-			((uint32_t)input_buffer[15] << 8) |
-			((uint32_t)input_buffer[16] << 16) |
-			((uint32_t)input_buffer[17] << 24);
+		uint32_t payload_length = (uint32_t)input_buffer[14] | ((uint32_t)input_buffer[15] << 8) |
+		                          ((uint32_t)input_buffer[16] << 16) |
+		                          ((uint32_t)input_buffer[17] << 24);
 
 		if (payload_length > DJP2_MAX_PAYLOAD) {
 			(void)dj_hw_safe_idle();
@@ -88,15 +82,13 @@ int main(void)
 			input_buffer[DJP2_HDR_SIZE + i] = read_byte();
 		}
 
-		if (djp2_decode(input_buffer, DJP2_HDR_SIZE + payload_length,
-				&request) != 0) {
+		if (djp2_decode(input_buffer, DJP2_HDR_SIZE + payload_length, &request) != 0) {
 			(void)dj_hw_safe_idle();
 			continue;
 		}
 
 		(void)djp2_dispatch(&request, &response);
-		size_t encoded_length = djp2_encode(&response, output_buffer,
-						  sizeof(output_buffer));
+		size_t encoded_length = djp2_encode(&response, output_buffer, sizeof(output_buffer));
 		if (encoded_length != 0U) {
 			write_bytes(output_buffer, encoded_length);
 		}

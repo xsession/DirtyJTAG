@@ -8,11 +8,11 @@
 #define DJ_SWO_RING_SIZE 2048u
 
 struct dj_swo_status {
-    uint32_t baud;
-    uint32_t flags;
-    uint32_t available;
-    uint32_t dropped;
-    bool active;
+	uint32_t baud;
+	uint32_t flags;
+	uint32_t available;
+	uint32_t dropped;
+	bool active;
 };
 
 int dj_swo_configure(uint32_t baud, uint32_t flags);
