@@ -1,0 +1,37 @@
+// Minimal RP2040 execution platform for the DirtyJTAG firmware smoke test.
+//
+// Renode's in-tree RP2040 platform is still incomplete.  This description
+// deliberately models only the CPU and address map needed to load the ELF and
+// exercise the Zephyr reset/startup path.  Peripheral windows are RAM-backed
+// so unexpected accesses stay observable without aborting the CPU.
+
+cpu0: CPU.CortexM @ sysbus
+    cpuType: "cortex-m0+"
+    nvic: nvic0
+
+nvic0: IRQControllers.NVIC @ sysbus 0xE000E000
+    -> cpu0@0
+
+rom: Memory.MappedMemory @ sysbus 0x00000000
+    size: 0x4000
+
+flash: Memory.MappedMemory @ sysbus 0x10000000
+    size: 0x200000
+
+xipControl: Memory.MappedMemory @ sysbus 0x14000000
+    size: 0x1000
+
+xipSsi: Memory.MappedMemory @ sysbus 0x18000000
+    size: 0x1000
+
+sram: Memory.MappedMemory @ sysbus 0x20000000
+    size: 0x42000
+
+apbPeripherals: Memory.MappedMemory @ sysbus 0x40000000
+    size: 0x70000
+
+ahbPeripherals: Memory.MappedMemory @ sysbus 0x50000000
+    size: 0x400000
+
+sio: Memory.MappedMemory @ sysbus 0xD0000000
+    size: 0x1000

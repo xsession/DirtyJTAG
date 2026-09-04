@@ -232,7 +232,10 @@ int main(void){
     assert(djp2_dispatch(&q,&r)==0);
     assert(r.len==12);
     assert(r.payload[3]==DJ_DEBUG_TRANSPORT_NATIVE);
-    assert((r.payload[4] | (r.payload[5]<<8) | (r.payload[6]<<16) | (r.payload[7]<<24)) & DJ_CAP_DEBUG_RUNCTRL);
+    assert(((uint32_t)r.payload[4] |
+            ((uint32_t)r.payload[5] << 8) |
+            ((uint32_t)r.payload[6] << 16) |
+            ((uint32_t)r.payload[7] << 24)) & DJ_CAP_DEBUG_RUNCTRL);
     q.cmd=DJP2_DEBUG_ATTACH; q.len=0;
     assert(djp2_dispatch(&q,&r)==0);
     q.cmd=DJP2_DEBUG_HALT; q.len=0;

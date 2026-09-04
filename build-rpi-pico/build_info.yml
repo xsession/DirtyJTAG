@@ -1,0 +1,5 @@
+west:
+  command: C:\Python311\Lib\site-packages\west\__main__.py build -p auto -b rpi_pico/rp2040
+    -d build-rpi-pico dirty_jtag
+  topdir: C:\GIT_
+  version: 1.2.0

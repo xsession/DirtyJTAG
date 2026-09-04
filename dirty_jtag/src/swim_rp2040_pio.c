@@ -250,7 +250,9 @@ static const struct dj_swim_phy_ops pio_ops = {
 int dj_swim_rp2040_pio_try_bind(uint8_t data0_gpio, uint32_t initial_hz)
 {
     if (ctx.bound) return 0;
-    const struct device *piodev = DEVICE_DT_GET(DT_NODELABEL(pio0));
+    /* Use an application alias instead of DT_NODELABEL(pio0): hardware/pio.h
+     * defines pio0 as a Pico SDK register-pointer macro. */
+    const struct device *piodev = DEVICE_DT_GET(DT_ALIAS(dirtyjtag_pio));
     if (!device_is_ready(piodev)) return -ENODEV;
 
     build_tx_program();

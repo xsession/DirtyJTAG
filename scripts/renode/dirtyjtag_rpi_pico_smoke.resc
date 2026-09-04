@@ -1,0 +1,156 @@
+using sysbus
+
+mach create "dirtyjtag-rpi-pico-smoke"
+
+$platform?=@scripts/renode/dirtyjtag_rpi_pico_smoke.repl
+$elf?=@build/rpi-pico/zephyr/zephyr.elf
+
+machine LoadPlatformDescription $platform
+
+set return_zero
+"""
+from Antmicro.Renode.Peripherals.CPU import RegisterValue
+cpu.SetRegister(0, RegisterValue.Create(0, 32))
+cpu.PC = cpu.LR
+"""
+
+set return_one
+"""
+from Antmicro.Renode.Peripherals.CPU import RegisterValue
+cpu.SetRegister(0, RegisterValue.Create(1, 32))
+cpu.PC = cpu.LR
+"""
+
+set return_void
+"""
+cpu.PC = cpu.LR
+"""
+
+set reset_marker
+"""
+cpu.InfoLog("DIRTYJTAG_RENODE_RESET_HANDLER_REACHED PC=0x{0:X8}", cpu.PC)
+"""
+
+set main_marker
+"""
+cpu.InfoLog("DIRTYJTAG_RENODE_MAIN_REACHED PC=0x{0:X8}", cpu.PC)
+"""
+
+set hal_marker
+"""
+cpu.InfoLog("DIRTYJTAG_RENODE_HAL_INIT_REACHED PC=0x{0:X8}", cpu.PC)
+"""
+
+set pio_marker
+"""
+cpu.InfoLog("DIRTYJTAG_RENODE_PIO_BIND_REACHED PC={0:X8}", cpu.PC)
+"""
+
+set safe_idle_marker
+"""
+cpu.InfoLog("DIRTYJTAG_RENODE_SAFE_IDLE_REACHED PC={0:X8}", cpu.PC)
+"""
+
+set usb_marker
+"""
+cpu.InfoLog("DIRTYJTAG_RENODE_USB_ENABLE_REACHED PC={0:X8}", cpu.PC)
+"""
+
+set read_loop_marker
+"""
+cpu.InfoLog("DIRTYJTAG_RENODE_PROTOCOL_READ_LOOP_REACHED PC={0:X8}", cpu.PC)
+"""
+
+set fatal_marker
+"""
+cpu.ErrorLog("DIRTYJTAG_RENODE_FATAL_HALT PC={0:X8} LR={1:X8}", cpu.PC, cpu.LR)
+"""
+
+set arm_fault_marker
+"""
+esf = cpu.GetRegister(1).RawValue
+fault_lr = machine.SystemBus.ReadDoubleWord(esf + 20)
+fault_pc = machine.SystemBus.ReadDoubleWord(esf + 24)
+cpu.ErrorLog("DIRTYJTAG_RENODE_ARM_FAULT EXCEPTION_PC={0:X8} EXCEPTION_LR={1:X8}", fault_pc, fault_lr)
+"""
+
+macro reset
+"""
+    sysbus LoadELF $elf
+    cpu0 VectorTableOffset `sysbus GetSymbolAddress "_vector_start"`
+
+    # RAM-backed reset registers need their hardware-completion bits seeded.
+    sysbus WriteDoubleWord 0x4000C008 0x01FFFFFF
+
+    # RP2040 SIO spinlock reads return non-zero when a lock is acquired.  The
+    # RAM-backed SIO fallback keeps the unlocked value in all 32 lock slots.
+    sysbus WriteDoubleWord 0xD0000100 1
+    sysbus WriteDoubleWord 0xD0000104 1
+    sysbus WriteDoubleWord 0xD0000108 1
+    sysbus WriteDoubleWord 0xD000010C 1
+    sysbus WriteDoubleWord 0xD0000110 1
+    sysbus WriteDoubleWord 0xD0000114 1
+    sysbus WriteDoubleWord 0xD0000118 1
+    sysbus WriteDoubleWord 0xD000011C 1
+    sysbus WriteDoubleWord 0xD0000120 1
+    sysbus WriteDoubleWord 0xD0000124 1
+    sysbus WriteDoubleWord 0xD0000128 1
+    sysbus WriteDoubleWord 0xD000012C 1
+    sysbus WriteDoubleWord 0xD0000130 1
+    sysbus WriteDoubleWord 0xD0000134 1
+    sysbus WriteDoubleWord 0xD0000138 1
+    sysbus WriteDoubleWord 0xD000013C 1
+    sysbus WriteDoubleWord 0xD0000140 1
+    sysbus WriteDoubleWord 0xD0000144 1
+    sysbus WriteDoubleWord 0xD0000148 1
+    sysbus WriteDoubleWord 0xD000014C 1
+    sysbus WriteDoubleWord 0xD0000150 1
+    sysbus WriteDoubleWord 0xD0000154 1
+    sysbus WriteDoubleWord 0xD0000158 1
+    sysbus WriteDoubleWord 0xD000015C 1
+    sysbus WriteDoubleWord 0xD0000160 1
+    sysbus WriteDoubleWord 0xD0000164 1
+    sysbus WriteDoubleWord 0xD0000168 1
+    sysbus WriteDoubleWord 0xD000016C 1
+    sysbus WriteDoubleWord 0xD0000170 1
+    sysbus WriteDoubleWord 0xD0000174 1
+    sysbus WriteDoubleWord 0xD0000178 1
+    sysbus WriteDoubleWord 0xD000017C 1
+
+    # LoadELF has already materialized and zero-filled the RAM segment.  Avoid
+    # spending most of a smoke test byte-copying the 98 KiB BSS in interpreted
+    # Cortex-M0+ code.
+    cpu0 AddHook `sysbus GetSymbolAddress "arch_bss_zero"` $return_void
+    cpu0 AddHook `sysbus GetSymbolAddress "vprintk"` $return_zero
+    cpu0 AddHook `sysbus GetSymbolAddress "hw_claim_lock"` $return_zero
+    cpu0 AddHook `sysbus GetSymbolAddress "hw_claim_unlock"` $return_void
+    cpu0 AddHook `sysbus GetSymbolAddress "z_impl_device_is_ready"` $return_one
+
+    # The upstream RP2040 description has no clock/reset controller models.
+    # Skip only that hardware-specific Zephyr init routine; the remainder of
+    # kernel startup and DirtyJTAG initialization executes normally.
+    cpu0 AddHook `sysbus GetSymbolAddress "clock_control_rpi_pico_init"` $return_zero
+    cpu0 AddHook `sysbus GetSymbolAddress "adc_rpi_init"` $return_zero
+    cpu0 AddHook `sysbus GetSymbolAddress "usb_rpi_init"` $return_zero
+    cpu0 AddHook `sysbus GetSymbolAddress "cdc_acm_init"` $return_zero
+
+    cpu0 AddHook `sysbus GetSymbolAddress "z_arm_reset"` $reset_marker
+    cpu0 AddHook `sysbus GetSymbolAddress "main"` $main_marker
+    cpu0 AddHook `sysbus GetSymbolAddress "dj_rpi_pico_hal_init"` $hal_marker
+    cpu0 AddHook `sysbus GetSymbolAddress "dj_swim_rp2040_pio_try_bind"` $pio_marker
+    cpu0 AddHook `sysbus GetSymbolAddress "dj_hw_safe_idle"` $safe_idle_marker
+    cpu0 AddHook `sysbus GetSymbolAddress "usb_enable"` $usb_marker
+    cpu0 AddHook `sysbus GetSymbolAddress "read_byte"` $read_loop_marker
+    cpu0 AddHook `sysbus GetSymbolAddress "z_arm_fatal_error"` $arm_fault_marker
+    cpu0 AddHook `sysbus GetSymbolAddress "z_fatal_error"` $fatal_marker
+    cpu0 AddHook `sysbus GetSymbolAddress "k_fatal_halt"` $fatal_marker
+    cpu0 AddHook `sysbus GetSymbolAddress "arch_system_halt"` $fatal_marker
+"""
+
+runMacro $reset
+emulation RunFor "0.010"
+
+cpu0 PC
+cpu0 SP
+cpu0 ExecutedInstructions
+quit

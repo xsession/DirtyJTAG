@@ -1,0 +1,11 @@
+[general]
+terminal = Termsharp
+collapse-repeated-log-entries = True
+compiler-cache-enabled = False
+serialization-mode = Generated
+use-synchronous-logging = False
+always-log-machine-name = False
+log-history-limit = 1000
+[monitor]
+consume-exceptions-from-command = True
+break-script-on-exception = True

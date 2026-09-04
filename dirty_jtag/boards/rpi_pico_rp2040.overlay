@@ -4,6 +4,7 @@
 / {
 	aliases {
 		dirtyjtag-pico = &dirtyjtag_pico;
+		dirtyjtag-pio = &pio0;
 	};
 
 	zephyr,user {
@@ -53,6 +54,11 @@
 };
 
 &adc {
+	status = "okay";
+};
+
+/* The RP2040 SWIM PHY allocates state machines from PIO0. */
+&pio0 {
 	status = "okay";
 };
 
