@@ -2,6 +2,8 @@
 #include "djprog/hw.h"
 #include <errno.h>
 
+/* Keep the selected backend and pin map in one place so protocol engines use
+ * the same safety sequencing when they manipulate target hardware. */
 static const struct dj_hw_ops *g;
 static struct dj_pinmap gmap = {{2, 3, 4, 5, 6, 7}};
 void dj_hw_bind(const struct dj_hw_ops *ops) {

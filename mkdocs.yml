@@ -1,0 +1,77 @@
+site_name: DirtyJTAG
+site_description: Zephyr-based universal programmer and debugger for Raspberry Pi Pico
+site_url: https://xsession.github.io/DirtyJTAG/
+repo_url: https://github.com/xsession/DirtyJTAG
+repo_name: xsession/DirtyJTAG
+docs_dir: docs
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: amber
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: amber
+markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.superfences
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - User guide: user_guide.md
+  - Debugging: DEBUGGING.md
+  - Support matrix: SUPPORT_MATRIX.md
+  - Architecture: architecture.md
+  - Protocol: USB_PROTOCOL.md
+  - Validation:
+      - Validation matrix: VALIDATION_MATRIX.md
+      - JTAG validation: jtag-validation.md
+      - Production documentation: PRODUCTION_DOCUMENTATION_INDEX.md
+  - Development:
+      - Build and test: building-dirtyjtag.md
+      - Clean-room boundary: CLEANROOM.md
+      - Release process: RELEASE_PROCESS.md
+  - Reference:
+      - Full documentation index: PRODUCTION_DOCUMENTATION_INDEX.md
+      - Operator guide: OPERATOR_GUIDE.md
+      - Production readiness: PRODUCTION_READY_DOCUMENTATION.md
+      - Safety review: SAFETY_MEDICAL_GRADE_REVIEW.md
+      - ADC calibration: ADC_CALIBRATION.md
+      - STM8 SWIM: STM8_SWIM_DEBUG.md
+      - RP2040 PIO SWIM: RP2040_PIO_SWIM.md
+      - dsPIC debug: DSPIC_DEBUG.md
+      - dsPIC HEX programming: REV_I_DSPIC_HEX_PROGRAMMING.md
+      - AVR and UPDI: REV_J_DSPIC_AVRDUDE_AVR.md
+      - AVR extended UPDI: REV_K_AVR_EXT_UPDI.md
+      - MSP430 support: REV_L_TI_MSP430_SUPPORT.md
+      - TMS320 support: REV_M_TI_TMS320_XDS110V3.md
+      - SEGGER trace: REV_O_SEGGER_TRACE_FEATURES.md
+      - SimpleLink support: REV_Q_VENDOR_FEATURES_SIMPLELINK.md
+      - RTT: SEGGER_RTT.md
+      - Trace workflows: SEGGER_TRACE_WORKFLOWS.md
+      - Niche controllers: NICHE_CONTROLLER_SUPPORT.md
+      - Vendor feature research: VENDOR_FEATURE_DEEPSEARCH_50.md
+      - Implementation notes: REV_F_G_H_IMPLEMENTATION.md
+      - STM32 flash protection: stm32f1-flash-protection.md
+      - UrJTAG integration: urjtag-dirtyjtag.md
+      - OpenFPGALoader integration: openfpgaloader-dirtyjtag.md
+      - Renode notes: renode-unicore-mx-notes.md
+      - Blue Pill installation: install-bluepill.md
+      - Baite installation: install-baite.md
+      - ST-Link v2 installation: install-stlinkv2.md
+      - ST-Link v2 SWD: install-stlinkv2-swd.md
+      - White ST-Link installation: install-stlinkv2white.md
+      - ST-Link DFU: install-stlinkv2-dfu.md
+      - STM32H103 installation: install-stm32h103.md
+      - Native simulation validation: reports/native-sim-validation.md
+      - Production readiness report: reports/production-readiness-summary.md

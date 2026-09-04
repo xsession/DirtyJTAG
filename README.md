@@ -10,6 +10,13 @@ Rev D added the first native non-ARM debugger path: STM8 SWIM halt/run/step/regi
 
 A raw wire transport is never advertised as a finished debugger.
 
+## Documentation
+
+The publishable documentation site is built from `docs/` with MkDocs and
+deployed to [GitHub Pages](https://xsession.github.io/DirtyJTAG/). The quickest
+entry points are the [getting-started guide](docs/getting-started.md),
+[user guide](docs/user_guide.md), and [support matrix](docs/SUPPORT_MATRIX.md).
+
 ## What is usable now for debugging
 
 ARM SWD and generic JTAG work through the included OpenOCD remote_bitbang bridge:

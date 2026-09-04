@@ -16,6 +16,8 @@
 #include <errno.h>
 #include <string.h>
 
+/* Decode and validate DJP2 before dispatch so malformed frames cannot reach a
+ * backend or alter target power state. */
 size_t djp2_encode(const struct djp2_frame *f, uint8_t *out, size_t cap) {
 	if (!f || !out || f->len > DJP2_MAX_PAYLOAD || cap < DJP2_HDR_SIZE + f->len)
 		return 0;

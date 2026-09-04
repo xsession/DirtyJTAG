@@ -35,7 +35,7 @@ Otherwise some male to female header cable works great, it fits the pad hole snu
 
 This is the new pinout for your DirtyJTAG dongle. You may want to print it and glue it to the case for practical reasons.
 
-![ST-Link v2 pinout with DirtyJTAG firmware](img/stlinkv2-pinout.svg)
+![ST-Link v2 pinout with DirtyJTAG firmware](img/stlink-pinout.jpg)
 
 Install [UrJTAG with DirtyJTAG support](urjtag-dirtyjtag.md). Plug your DirtyJTAG dongle, and check with the `lsusb` command that a new device with `0x1209/0xC0CA` as its USB VID/PID has appeared.
 

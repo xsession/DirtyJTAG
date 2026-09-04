@@ -7,6 +7,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/usb/usb_device.h>
 
+/* The universal frontend is a small USB-to-target event loop. Target-specific
+ * behavior stays behind the DJP2 dispatcher and hardware abstraction. */
 extern int dj_rpi_pico_hal_init(void);
 
 static const struct device *const cdc = DEVICE_DT_GET(DT_NODELABEL(dj_cdc));

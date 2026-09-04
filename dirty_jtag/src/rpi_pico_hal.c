@@ -61,6 +61,8 @@ static const struct gpio_dt_spec hv_data0_apply = GPIO_PROP(hv_data0_apply, hv_d
 #define ADC_CH_VPP ADC_CHANNEL(vpp)
 #define ADC_CH_ITARGET ADC_CHANNEL(itarget)
 
+/* This adapter owns the protected Pico front end. Higher layers see logical
+ * pins, power modes, and measurements through dj_hw_ops. */
 static bool reset_asserted;
 static bool boost_on;
 static bool vpp_on;

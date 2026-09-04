@@ -26,6 +26,8 @@
 #define BIT(n) (1u << (n))
 #endif
 
+/* PIO keeps SWIM bit timing independent of USB and Zephyr scheduling. The
+ * regular GPIO PHY remains available as the portable fallback. */
 /* PIO instruction buffers are generated at runtime with Pico SDK encoders so
  * the source stays readable and avoids hand-maintained instruction constants.
  *
@@ -260,9 +262,8 @@ static const struct dj_swim_phy_ops pio_ops = {
 int dj_swim_rp2040_pio_try_bind(uint8_t data0_gpio, uint32_t initial_hz) {
 	if (ctx.bound)
 		return 0;
-	/* Use an application alias instead of DT_NODELABEL(pio0): hardware/pio.h
-     * defines pio0 as
-	 * a Pico SDK register-pointer macro. */
+	/* Use an application alias instead of DT_NODELABEL(pio0):
+	 * hardware/pio.h defines pio0 as a Pico SDK register-pointer macro. */
 	const struct device *piodev = DEVICE_DT_GET(DT_ALIAS(dirtyjtag_pio));
 	if (!device_is_ready(piodev))
 		return -ENODEV;
